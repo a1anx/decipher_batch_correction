@@ -32,35 +32,19 @@ def plot_embedding(adata, latent_space, figsize, folder, file_suffix="", title=N
             auto_flip_decipher_z=False,
         )
 
-    # Choose coloring: prefer 'dataset_id' (categorical) if present; otherwise use 'latent_shift' (continuous)
-    if "dataset_id" in adata.obs.columns:
-        color_key = "dataset_id"
-        # ensure categorical dtype for consistent coloring
-        adata.obs["dataset_id"] = adata.obs["dataset_id"].astype("category")
-        # optional palette if expected labels are present
-        cats = list(adata.obs["dataset_id"].cat.categories)
-        palette_map = {"no_shift": "#1f77b4", "shift_0.5": "#d62728"}
-        if all(c in palette_map for c in cats):
-            adata.uns["dataset_id_colors"] = [palette_map[c] for c in cats]
-    else:
-        color_key = "latent_shift"
-
     sc.pl.embedding(
         adata,
         basis=latent_space,
-        color=color_key,
+        color="latent_t",
         wspace=0.5,
         hspace=0.5,
         ax=ax,
         size=30,
         show=False,
     )
-    # If using a continuous color (e.g., 'latent_shift'), adjust colorbar ticks to just 0 and 1
-    if color_key != "dataset_id":
-        axes_list = fig.get_axes()
-        if len(axes_list) > 1:
-            cbar = axes_list[-1]
-            cbar.set_yticks([0, 1])
+    # adjust colorbar ticks to just 0 and 1
+    cbar = fig.get_axes()[1]
+    cbar.set_yticks([0, 1])
     sns.despine()
     # remove x and y axis and their ticks/labels
     ax.set_xticks([])
@@ -93,23 +77,22 @@ adata = sc.read("figures/adata_density_0.0_seed_4.h5ad")
 
 latent_spaces = ["latent", "X_umap", "X_fd", "X_scVI_umap", "decipher_decipher_v"]
 
+figsize = [2.5, 1.5]
+for latent_space in latent_spaces:
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
+    plot_embedding(adata, latent_space, figsize, folder)
 
-figsize = [4, 3]
-# for latent_space in latent_spaces:
-#     fig, ax = plt.subplots(1, 1, figsize=figsize)
-#     plot_embedding(adata, latent_space, figsize, folder)
-
-# figsize = [2.5, 2]
-# poster_folder = "figures/poster"
-# os.makedirs(poster_folder, exist_ok=True)
-# for latent_space in latent_spaces:
-#     fig, ax = plt.subplots(1, 1, figsize=figsize)
-#     plot_embedding(adata, latent_space, figsize, poster_folder)
+figsize = [2.5, 2]
+poster_folder = "figures/poster"
+os.makedirs(poster_folder, exist_ok=True)
+for latent_space in latent_spaces:
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
+    plot_embedding(adata, latent_space, figsize, poster_folder)
 
 # Now look at higher densities
 
-for density in [0.0, 0.05, 0.1]:
-    adata = sc.read(f"figures/adata_density_{density}_seed_4.h5ad")
+for density in [0, 0.05, 0.1]:
+    adata = sc.read(f"figures/adata_density_{density:.1f}_seed_4.h5ad")
     latent_space = "latent"
     plot_embedding(
         adata,
