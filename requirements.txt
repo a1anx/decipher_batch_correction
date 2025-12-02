@@ -1,0 +1,10 @@
+#New requirements
+matplotlib
+numpy
+pandas
+phate
+scanpy
+scvi-tools
+scikit-learn
+torch
+cell-decipher
