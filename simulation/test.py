@@ -56,6 +56,7 @@ if __name__ == "__main__":
     latent_spaces = run_methods(adata_sim)
     #
     latent_spaces = [x for x in latent_spaces if adata_sim.obsm[x].shape[1] == 2]
+    metrics_local = compute_plot_metrics(adata, keys_list, ref_key="latent_z")
     metrics_local = compute_plot_metrics(
         adata_sim,
         latent_spaces,

@@ -121,34 +121,33 @@ def simulation_correlated_1(
     z4 = (branch_id == 1) * np.clip(latent_t - branching_t2, 0, branching_t1)
     z2 = (branch_id >= 0) * (np.clip(latent_t - 0.2, 0, 0.5) - np.clip(latent_t - 0.5, 0, 0.5))
 
-    # Create latent_z
-    latent_z = np.concatenate([z1, z3, z5], axis=1)
-    latent_z_sampled = np.random.normal(latent_z, sigma)
-    latent_z_sampled[:, 0] /= total_size
-    
-    
     # delta
     if apply_shift == False:
         delta = 0
     else:
         # latent_t has shape (n_samples, 1)
         delta = alpha * (latent_t[:, 0]) # shape (n_samples,)
-    # apply the shift
+
+    # Create latent_z
+    latent_z = np.concatenate([z1, z3, z5], axis=1)
+    latent_z_sampled = np.random.normal(latent_z, sigma)
+    latent_z_sampled[:, 0] /= total_size
+    # apply the shift only to dim 0
     latent_z_sampled[:, 0] += delta
 
     net = RandomNet(
         latent_z_sampled.shape[1],
         n_genes,
     )
+    
     data = net(torch.tensor(latent_z_sampled).float()).detach().numpy().astype(int)
 
     adata_sim = sc.AnnData(data)
     adata_sim.obs["latent_t"] = latent_t
     adata_sim.obs["branch_id"] = branch_id
-    adata_sim.obsm["latent_z"] = latent_z
-    
     k_means = KMeans(k_clusters)
     k_means.fit(latent_z)
+
     adata_sim.obs["cluster_latent"] = k_means.labels_
 
     for i in range(latent_z.shape[1]):
@@ -481,7 +480,7 @@ def run_delta_shift_experiment(
         show=False,
     )
     
-    plt.savefig(os.path.join(out_folder, f"latent_shift_{apply_shift}_alpha{alpha}.pdf"), bbox_inches="tight")
+    plt.savefig(os.path.join(out_folder, f"latent_shift_{apply_shift}.pdf"), bbox_inches="tight")
     plt.close()
 
     # 4. Run all methods on the dataset
@@ -506,35 +505,76 @@ def run_delta_shift_experiment(
     adata_sim.write(f"{adata_folder}/adata_shift{apply_shift}_alpha{alpha}.h5ad")
 
 
-if __name__ == "__main__":
-    run_delta_shift_experiment(
-            n_samples=1000,
-            n_genes=50,
-            sigma=0.05,
-            branch_prob=0.7,
-            k_clusters=20,
-            hole_size=1,
-            n_holes=3,
-            hole_density=0.05,
-            seed=0,
-            out_folder="figures_delta_shift",
-            apply_shift = True,
-            alpha = -0.0001,
-            )
-    # alpha_vec = [-0.0001]
-    # for alpha in alpha_vec:
-    #     run_delta_shift_experiment(
-    #         n_samples=1000,
-    #         n_genes=50,
-    #         sigma=0.05,
-    #         branch_prob=0.7,
-    #         k_clusters=20,
-    #         hole_size=1,
-    #         n_holes=3,
-    #         hole_density=0.05,
-    #         seed=0,
-    #         out_folder="figures_delta_shift",
-    #         apply_shift = True,
-    #         alpha = alpha,
+
+
+
+    # # 6. UMAP and Decipher visible embedding plots (true vs shifted)
+
+    # # UMAP (X_default_umap) colored by cluster_latent and latent_t
+    # for name, adata_obj, tag in [
+    #     ("true", adata_true, "delta0"),
+    #     ("shifted", adata_shifted, "delta_shifted"),
+    # ]:
+    #     if "X_default_umap" in adata_obj.obsm_keys():
+    #         sc.pl.embedding(
+    #             adata_obj,
+    #             basis="X_default_umap",
+    #             color=["cluster_latent", "latent_t", "branch_id"],
+    #             ncols=3,
+    #             show=False,
     #         )
-        
+    #         plt.savefig(
+    #             os.path.join(out_folder, f"umap_{tag}.pdf"),
+    #             bbox_inches="tight",
+    #         )
+    #         plt.close()
+
+    #     # Decipher visible embedding
+    #     if "decipher_decipher_v" in adata_obj.obsm_keys():
+    #         sc.pl.embedding(
+    #             adata_obj,
+    #             basis="decipher_decipher_v",
+    #             color=["cluster_latent", "latent_t", "branch_id"],
+    #             ncols=3,
+    #             show=False,
+    #         )
+    #         plt.savefig(
+    #             os.path.join(out_folder, f"decipher_v_{tag}.pdf"),
+    #             bbox_inches="tight",
+    #         )
+    #         plt.close()
+
+    #         # 7. MST on Decipher visible space (trajectory)
+    #         compute_mst_on_decipher(adata_obj, basis_key="decipher_decipher_v")
+    #         # You can later use adata_obj.obsp["decipher_mst"] to overlay edges if desired.
+
+
+if __name__ == "__main__":
+    
+    
+    
+    
+    # Example: 3D latent (z1, z3, z5); shift along first two dims
+    # Adjust delta to match adata_true.obsm["latent"].shape[1] (usually 3 in your code).
+    
+    ## random unit vector
+    # np.random.seed(0)
+    # v = np.random.randn(3)
+    # v = v / np.linalg.norm(v)
+    
+    # run_delta_shift_experiment(
+    #     #delta=delta_vec,
+    #     v = v,
+    #     mag = 5,
+    #     n_samples=1000,
+    #     n_genes=50,
+    #     sigma=0.05,
+    #     branch_prob=0.7,
+    #     k_clusters=20,
+    #     hole_size=1,
+    #     n_holes=3,
+    #     hole_density=0.05,
+    #     seed=0,
+    #     out_folder=f"figures_delta_shiftmag5",
+    # )
+    

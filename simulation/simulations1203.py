@@ -172,6 +172,20 @@ _LOGGER = logging.getLogger(__name__)
 
 def run_methods(adata, seed=0):
     latent_spaces = []
+    
+    # ---------- 1) Make a normalized copy for UMAP/PCA/PHATE ----------
+    adata_norm = adata.copy()
+    sc.pp.normalize_total(adata_norm, target_sum=1e4)
+    sc.pp.log1p(adata_norm)
+    # optionally: sc.pp.highly_variable_genes, sc.pp.scale, etc.
+
+    # ---------- 2) UMAP on normalized data ----------
+    _LOGGER.info("Computing UMAP on normalized data")
+    sc.pp.neighbors(adata_norm, random_state=seed)
+    sc.tl.umap(adata_norm, random_state=seed)
+    adata.obsm["X_norm_umap"] = adata_norm.obsm["X_umap"]
+    latent_spaces.append("X_norm_umap")
+    _LOGGER.info("Norm UMAP computed")
 
     # Compute UMAP
     _LOGGER.info("Computing UMAP")
@@ -181,63 +195,63 @@ def run_methods(adata, seed=0):
     latent_spaces.append("X_default_umap")
     _LOGGER.info("UMAP computed")
 
-    # Compute scVI
-    _LOGGER.info("Computing scVI")
-    scvi.settings.seed = seed
-    scvi.model.SCVI.setup_anndata(adata)
-    sim_model = scvi.model.SCVI(adata, gene_likelihood="nb", n_latent=10)
-    sim_model.train()
-    adata.obsm["X_scVI"] = sim_model.get_latent_representation()
-    latent_spaces.append("X_scVI")
-    _LOGGER.info("scVI computed")
+    # Compute scVIe
+    # _LOGGER.info("Computing scVI")
+    # scvi.settings.seed = seed
+    # scvi.model.SCVI.setup_anndata(adata)
+    # sim_model = scvi.model.SCVI(adata, gene_likelihood="nb", n_latent=10)
+    # sim_model.train()
+    # adata.obsm["X_scVI"] = sim_model.get_latent_representation()
+    # latent_spaces.append("X_scVI")
+    # _LOGGER.info("scVI computed")
 
-    # Compute scVI-umap
-    _LOGGER.info("Computing scVI-UMAP")
-    sc.pp.neighbors(adata, use_rep="X_scVI", key_added="scVI_neighbors", random_state=seed)
-    sc.tl.umap(adata, neighbors_key="scVI_neighbors", random_state=seed)
-    adata.obsm["X_scVI_umap"] = adata.obsm["X_umap"]
-    latent_spaces.append("X_scVI_umap")
-    _LOGGER.info("scVI-UMAP computed")
+    # # Compute scVI-umap
+    # _LOGGER.info("Computing scVI-UMAP")
+    # sc.pp.neighbors(adata, use_rep="X_scVI", key_added="scVI_neighbors", random_state=seed)
+    # sc.tl.umap(adata, neighbors_key="scVI_neighbors", random_state=seed)
+    # adata.obsm["X_scVI_umap"] = adata.obsm["X_umap"]
+    # latent_spaces.append("X_scVI_umap")
+    # _LOGGER.info("scVI-UMAP computed")
 
-    # Compute scVI-linear
-    _LOGGER.info("Computing scVI-linear")
-    scvi.settings.seed = seed
-    scvi.model.LinearSCVI.setup_anndata(adata)
-    sim_model = scvi.model.LinearSCVI(adata, gene_likelihood="nb", n_latent=10)
-    sim_model.train()
-    adata.obsm["X_scVI_linear"] = sim_model.get_latent_representation()
-    latent_spaces.append("X_scVI_linear")
-    _LOGGER.info("scVI-linear computed")
+    # # Compute scVI-linear
+    # _LOGGER.info("Computing scVI-linear")
+    # scvi.settings.seed = seed
+    # scvi.model.LinearSCVI.setup_anndata(adata)
+    # sim_model = scvi.model.LinearSCVI(adata, gene_likelihood="nb", n_latent=10)
+    # sim_model.train()
+    # adata.obsm["X_scVI_linear"] = sim_model.get_latent_representation()
+    # latent_spaces.append("X_scVI_linear")
+    # _LOGGER.info("scVI-linear computed")
 
-    # Compute scVI-linear-umap
-    _LOGGER.info("Computing scVI-linear-UMAP")
-    sc.pp.neighbors(
-        adata, use_rep="X_scVI_linear", key_added="scVI_linear_neighbors", random_state=seed
-    )
-    sc.tl.umap(adata, neighbors_key="scVI_linear_neighbors", random_state=seed)
-    adata.obsm["X_scVI_linear_umap"] = adata.obsm["X_umap"]
-    latent_spaces.append("X_scVI_linear_umap")
-    _LOGGER.info("scVI-linear-UMAP computed")
+    # # Compute scVI-linear-umap
+    # _LOGGER.info("Computing scVI-linear-UMAP")
+    # sc.pp.neighbors(
+    #     adata, use_rep="X_scVI_linear", key_added="scVI_linear_neighbors", random_state=seed
+    # )
+    # sc.tl.umap(adata, neighbors_key="scVI_linear_neighbors", random_state=seed)
+    # adata.obsm["X_scVI_linear_umap"] = adata.obsm["X_umap"]
+    # latent_spaces.append("X_scVI_linear_umap")
+    # _LOGGER.info("scVI-linear-UMAP computed")
 
-    # Compute PCA
-    _LOGGER.info("Computing PCA")
-    sc.tl.pca(adata, n_comps=10, random_state=seed)
-    latent_spaces.append("X_pca")
-    _LOGGER.info("PCA computed")
+    # # Compute PCA
+    # _LOGGER.info("Computing PCA")
+    # sc.tl.pca(adata, n_comps=10, random_state=seed)
+    # latent_spaces.append("X_pca")
+    # _LOGGER.info("PCA computed")
 
-    # Compute Phate
-    _LOGGER.info("Computing Phate")
-    phate_op = phate.PHATE(n_components=10, random_state=seed)
-    adata.obsm["X_phate"] = phate_op.fit_transform(adata.X)
-    latent_spaces.append("X_phate")
-    _LOGGER.info("Phate computed")
-    #
-    _LOGGER.info("Computing Phate-UMAP")
-    sc.pp.neighbors(adata, use_rep="X_phate", key_added="phate_neighbors", random_state=seed)
-    sc.tl.umap(adata, neighbors_key="phate_neighbors", random_state=seed)
-    adata.obsm["X_phate_umap"] = adata.obsm["X_umap"]
-    latent_spaces.append("X_phate_umap")
-    _LOGGER.info("Phate-UMAP computed")
+    # # Compute Phate
+    # _LOGGER.info("Computing Phate")
+    # phate_op = phate.PHATE(n_components=10, random_state=seed)
+    # adata.obsm["X_phate"] = phate_op.fit_transform(adata.X)
+    # latent_spaces.append("X_phate")
+    # _LOGGER.info("Phate computed")
+    # #
+    # _LOGGER.info("Computing Phate-UMAP")
+    # sc.pp.neighbors(adata, use_rep="X_phate", key_added="phate_neighbors", random_state=seed)
+    # sc.tl.umap(adata, neighbors_key="phate_neighbors", random_state=seed)
+    # adata.obsm["X_phate_umap"] = adata.obsm["X_umap"]
+    # latent_spaces.append("X_phate_umap")
+    # _LOGGER.info("Phate-UMAP computed")
 
     configuration = {"dim_v": 2, "dim_z": 10}
     config = dc.tl.DecipherConfig(
@@ -440,6 +454,7 @@ def run_delta_shift_experiment(
     hole_density: float = 0.05,
     seed: int = 0,
     out_folder: str = "figures_delta_shift",
+    adata_folder: str = "newadata",
     apply_shift = False,
     alpha: float = 0.0, # slope of the linear shift
 ):
@@ -456,7 +471,6 @@ def run_delta_shift_experiment(
     - Compute an MST on Decipher's visible embedding as a simple trajectory
     """
     os.makedirs(out_folder, exist_ok=True)
-    adata_folder = "adata"
     os.makedirs(adata_folder, exist_ok=True)
 
     # 1. Simulate base (true) dataset: delta = 0
@@ -497,33 +511,17 @@ def run_delta_shift_experiment(
         label_key="cluster_latent",
         random_state=seed,
     )
-    ari["which_dataset"] = f"shift{apply_shift}_{alpha}"
-
+    ari["which_dataset"] = f"shift{apply_shift}_alpha{alpha}"
     #ari_all = pd.concat([ari_true, ari_shifted], ignore_index=True)
-    #ari_all.to_csv(os.path.join(out_folder, f"ari_by_method_true_vs_shifted{mag}.csv"), index=False)
+    ari_folder = "ari"
+    os.makedirs(ari_folder, exist_ok=True)
+    ari.to_csv(os.path.join(ari_folder, f"ari_by_method_true_vs_shifted{alpha}.csv"), index=False)
 
     # save adata
     adata_sim.write(f"{adata_folder}/adata_shift{apply_shift}_alpha{alpha}.h5ad")
 
-
 if __name__ == "__main__":
-    run_delta_shift_experiment(
-            n_samples=1000,
-            n_genes=50,
-            sigma=0.05,
-            branch_prob=0.7,
-            k_clusters=20,
-            hole_size=1,
-            n_holes=3,
-            hole_density=0.05,
-            seed=0,
-            out_folder="figures_delta_shift",
-            apply_shift = True,
-            alpha = -0.0001,
-            )
-    # alpha_vec = [-0.0001]
-    # for alpha in alpha_vec:
-    #     run_delta_shift_experiment(
+    # run_delta_shift_experiment(
     #         n_samples=1000,
     #         n_genes=50,
     #         sigma=0.05,
@@ -533,8 +531,27 @@ if __name__ == "__main__":
     #         n_holes=3,
     #         hole_density=0.05,
     #         seed=0,
-    #         out_folder="figures_delta_shift",
-    #         apply_shift = True,
-    #         alpha = alpha,
+    #         out_folder="new_figures",
+    #         adata_folder= "newadata",
+    #         apply_shift = False,
+    #         alpha = 0,
     #         )
+    alpha_vec = [1,2]
+    for alpha in alpha_vec:
+        run_delta_shift_experiment(
+            n_samples=1000,
+            n_genes=50,
+            sigma=0.05,
+            branch_prob=0.7,
+            k_clusters=20,
+            hole_size=1,
+            n_holes=3,
+            hole_density=0.05,
+            seed=0,
+            out_folder="new_figures",
+            adata_folder= "newadata",
+            apply_shift = True,
+            alpha = alpha,
+            )
+    
         

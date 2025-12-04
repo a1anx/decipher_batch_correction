@@ -1,2 +1,32 @@
-# Python Virtual Environment
-.venv/
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environments
+.env
+.venv
+env/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+*.DS_Store
+
+# Data files (uncomment if you don't want to commit large data files)
+# adata/
+# newadata/
+# *.h5ad
+# *.csv
+# *.pkl
