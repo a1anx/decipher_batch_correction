@@ -73,5 +73,3 @@ urllib3==2.5.0
 wrapt==2.0.1
 xlrd==2.0.2
 zipp==3.23.0
-scvi-tools
-cell-decipher
