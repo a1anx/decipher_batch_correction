@@ -1,0 +1,4 @@
+method,ARI,which_dataset
+X_norm_umap,0.5333506063888511,shiftTrue_alpha0.2
+X_default_umap,0.37740688272742584,shiftTrue_alpha0.2
+decipher_decipher_v,0.4334147821308389,shiftTrue_alpha0.2
