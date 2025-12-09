@@ -73,7 +73,7 @@ folder = "figures/paper"
 os.makedirs(folder, exist_ok=True)
 
 # just pick one seed (here the last run)
-adata = sc.read("adata/adata_shiftFalse_alpha0.0.h5ad")
+#adata = sc.read("adata/adata_shiftFalse_alpha0.0.h5ad")
 
 
 
