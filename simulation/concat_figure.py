@@ -7,12 +7,13 @@ import seaborn as sns
 
 import matplotlib as mpl
 
-from figures import plot_embedding
+#from figures import plot_embedding
 
 def umap_norm(
     adata,
     out_folder="umap_figures",
-    output_name = "norm3",
+    output_name = "umap_norm",
+    unique_id = "",
     seed=0,
 ):
     os.makedirs(out_folder, exist_ok=True)
@@ -33,16 +34,17 @@ def umap_norm(
         show=False,
     )
     plt.savefig(
-        os.path.join(out_folder, f"norm_combined_umap_{output_name}.png"),
+        os.path.join(out_folder, f"{output_name}_{unique_id}.png"),
         bbox_inches="tight",
     )
     
     
 
-def plot_concat_figure(
-    adata, 
-    out_folder="new_figures",
-    output_name = ""
+def plot_norm_umap(
+    adata,
+    out_folder="umap_figures",
+    output_name = "umap_norm",
+    unique_id = "",
     ):
     # normalized Umap
     sc.pl.embedding(
@@ -53,24 +55,24 @@ def plot_concat_figure(
         show=False,
     )
     plt.savefig(
-        os.path.join(out_folder, f"norm_umap_combined_{output_name}.png"),
+        os.path.join(out_folder, f"{output_name}_{unique_id}.png"),
         bbox_inches="tight",
     )
     plt.close()
     
     # original 
-    sc.pl.embedding(
-        adata,
-        basis="X_default_umap",
-        color=["cluster_latent", "latent_t", "branch_id", "shift"],
-        ncols=4,
-        show=False,
-    )
-    plt.savefig(
-        os.path.join(out_folder, f"umap_combined_{output_name}.png"),
-        bbox_inches="tight",
-    )
-    plt.close()
+    # sc.pl.embedding(
+    #     adata,
+    #     basis="X_default_umap",
+    #     color=["cluster_latent", "latent_t", "branch_id", "shift"],
+    #     ncols=4,
+    #     show=False,
+    # )
+    # plt.savefig(
+    #     os.path.join(out_folder, f"{output_name}_{unique_id}.png"),
+    #     bbox_inches="tight",
+    # )
+    # plt.close()
     
     # Decipher visible embedding
     # sc.pl.embedding(
@@ -87,10 +89,10 @@ def plot_concat_figure(
     # plt.close()
     
 
-if __name__ == "__main__":
-    figsize = [2.5, 2]
-    umap_norm(
-        adata = sc.read("newadata/adata_combined_norm_3.h5ad"))
+# if __name__ == "__main__":
+#     figsize = [2.5, 2]
+#     umap_norm(
+#         adata = sc.read("newadata/adata_combined_norm_3.h5ad"))
     # plot_concat_figure(
     #     adata = sc.read("newadata/adata_combined_norm_2.h5ad"),
     #     output_name = "new2")
