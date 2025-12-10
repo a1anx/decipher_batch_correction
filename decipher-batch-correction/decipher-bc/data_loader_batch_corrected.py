@@ -11,11 +11,27 @@ import torch.utils.data
 
 
 def get_dense_X(adata):
-    """Convert AnnData.X to dense numpy array if sparse."""
-    if isinstance(adata.X, np.ndarray):
-        return adata.X
+    """
+    Convert AnnData.X to dense numpy array if sparse.
+
+    IMPORTANT: If adata has a 'counts' layer, use that instead of adata.X.
+    This is because the Decipher model uses NegativeBinomial distribution which
+    requires integer counts, not log-transformed data.
+    """
+    # Check if raw counts are stored in a layer
+    if 'counts' in adata.layers:
+        print("INFO: Using raw counts from adata.layers['counts']")
+        data = adata.layers['counts']
     else:
-        return adata.X.toarray()
+        # Fall back to adata.X (will be log-transformed if preprocessing was done)
+        print("WARNING: No 'counts' layer found, using adata.X (may be log-transformed)")
+        data = adata.X
+
+    # Convert to dense array if sparse
+    if isinstance(data, np.ndarray):
+        return data
+    else:
+        return data.toarray()
 
 
 def make_batch_corrected_data_loader(

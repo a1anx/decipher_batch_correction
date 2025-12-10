@@ -20,9 +20,9 @@ from torch.nn.functional import softplus
 
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'decipher-main'))
 
-from decipher.tools._decipher.module import ConditionalDenseNN
+# Import ConditionalDenseNN from local copy instead of decipher package
+from conditional_dense_nn import ConditionalDenseNN
 from batch_corrected_decoder import BatchCorrectedDecoder
 
 
