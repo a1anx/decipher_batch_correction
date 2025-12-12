@@ -1,0 +1,40 @@
+/home/alan/Documents/decipher_batch_correction/decipher_env/lib/python3.13/site-packages/anndata/_core/anndata.py:1796: UserWarning: Observation names are not unique. To make them unique, call `.obs_names_make_unique`.
+  utils.warn_names_duplicates("obs")
+/home/alan/Documents/decipher_batch_correction/decipher_env/lib/python3.13/site-packages/anndata/_core/anndata.py:1796: UserWarning: Observation names are not unique. To make them unique, call `.obs_names_make_unique`.
+  utils.warn_names_duplicates("obs")
+================================================================================
+COMPARING CONCATENATION VS ATTENTION ON adata_combined_2.h5ad
+================================================================================
+
+[1/4] Loading data...
+✓ Loaded concatenation results: (4000, 50)
+✓ Loaded attention results: (4000, 50)
+
+[2/4] Computing batch mixing metrics...
+
+Batch Mixing Scores (Silhouette, lower = better mixing):
+  Original Decipher:      -0.0039
+  Concatenation:          -0.0120
+  Attention:              -0.0125
+
+Improvement over original:
+  Concatenation: +0.0081
+  Attention:     +0.0085
+
+Concatenation vs Attention:
+  ✓ Attention wins by 0.0005
+
+[3/4] Creating comparison visualizations...
+Traceback (most recent call last):
+  File "/home/alan/Documents/decipher_batch_correction/decipher-batch-correction/decipher-bc-concat/compare_concat_vs_attention.py", line 127, in <module>
+    sc.pl.scatter(adata_concat, basis='decipher_decipher_z', x=0, y=1, color='latent_t',
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                  show=False, ax=ax, title='Original Z - Pseudotime')
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alan/Documents/decipher_batch_correction/decipher_env/lib/python3.13/site-packages/legacy_api_wrap/__init__.py", line 88, in fn_compatible
+    return fn(*args_all, **kw)
+  File "/home/alan/Documents/decipher_batch_correction/decipher_env/lib/python3.13/site-packages/scanpy/plotting/_anndata.py", line 193, in scatter
+    return _scatter_obs(**args)
+  File "/home/alan/Documents/decipher_batch_correction/decipher_env/lib/python3.13/site-packages/scanpy/plotting/_anndata.py", line 332, in _scatter_obs
+    raise KeyError(msg) from None
+KeyError: 'compute coordinates using visualization tool decipher_decipher_z first'

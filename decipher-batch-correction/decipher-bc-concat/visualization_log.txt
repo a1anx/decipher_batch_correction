@@ -1,0 +1,104 @@
+/home/alan/Documents/decipher_batch_correction/decipher_env/lib/python3.13/site-packages/anndata/_core/anndata.py:1796: UserWarning: Observation names are not unique. To make them unique, call `.obs_names_make_unique`.
+  utils.warn_names_duplicates("obs")
+/home/alan/Documents/decipher_batch_correction/decipher_env/lib/python3.13/site-packages/sklearn/manifold/_spectral_embedding.py:328: UserWarning: Graph is not fully connected, spectral embedding may not work as expected.
+  warnings.warn(
+================================================================================
+COMPREHENSIVE VISUALIZATION: CONCATENATION-BASED BATCH CORRECTION
+================================================================================
+
+[1/5] Loading data...
+✓ Loaded data: 4000 cells, 50 genes
+  Available representations:
+    - X_decipher_concat_v: (4000, 2)
+    - X_decipher_concat_z: (4000, 10)
+    - X_default_umap: (4000, 2)
+    - X_pca: (4000, 10)
+    - X_phate: (4000, 10)
+    - X_phate_umap: (4000, 2)
+    - X_scVI: (4000, 10)
+    - X_scVI_linear: (4000, 10)
+    - X_scVI_linear_umap: (4000, 2)
+    - X_scVI_umap: (4000, 2)
+    - X_umap: (4000, 2)
+    - decipher_decipher_v: (4000, 2)
+    - decipher_decipher_z: (4000, 10)
+    - latent: (4000, 3)
+
+✓ Found pseudotime column: 'latent_t'
+  Range: [0.001, 0.999]
+
+[2/5] Computing UMAPs...
+✓ UMAP on concatenation embeddings
+✓ UMAP on original Decipher embeddings
+
+[3/5] Computing batch mixing metrics...
+
+Batch Mixing Scores (Silhouette, lower = better mixing):
+  Original Decipher:      -0.0039
+  Concat Batch-Corrected: -0.0120
+  Improvement:            +0.0081
+  ✓ Concatenation shows BETTER mixing
+
+[4/5] Creating visualizations...
+  Creating Figure 1: Method comparison (3×3 grid)...
+    ✓ Saved: concat_method_comparison.png
+  Creating Figure 2: Biological variables...
+    ✓ Saved: concat_biological_variables.png
+  Creating Figure 3: V space four-panel comparison...
+    ✓ Saved: concat_v_space_four_panel.png
+  Creating Figure 4: V space side-by-side comparisons...
+    ✓ Saved: concat_v_original_comparison.png
+    ✓ Saved: concat_v_batch_corrected_comparison.png
+
+[5/5] Generating summary report...
+
+================================================================================
+SUMMARY
+================================================================================
+
+Files created:
+  1. concat_method_comparison.png
+     - 3×3 grid comparing different methods
+     - All colored by condition (shift)
+     - UMAP, Z space, V space across methods
+
+  2. concat_biological_variables.png
+     - Biological variables (latent_t, branch_id)
+     - Variance explained visualization
+     - Condition comparison
+
+  3. concat_v_space_four_panel.png
+     - Four-panel V space comparison
+     - Top: Original V (condition vs pseudotime)
+     - Bottom: Concat V (condition vs pseudotime)
+
+  4. concat_v_original_comparison.png
+     - Original V: condition vs pseudotime side-by-side
+
+  5. concat_v_batch_corrected_comparison.png
+     - Concat V: condition vs pseudotime side-by-side
+
+Approach:
+  - Uses CONCATENATION: concat([z, batch_emb]) → MLP
+  - Simpler than attention mechanism
+  - Faster training
+  - Good baseline for comparison
+
+Batch Mixing Performance:
+  Original:           -0.0039
+  Concat-corrected:   -0.0120
+  Improvement:        +0.0081
+  ✓ Batch correction successful (lower silhouette score)
+
+Interpretation guide:
+  - Look for MIXING of colors (batches) in concat plots
+  - Better batch correction = more mixed colors
+  - Biological structure should be PRESERVED
+  - Check that time (latent_t) and branches are still visible
+  - Smooth pseudotime gradient = trajectory preserved
+
+================================================================================
+✓ ALL VISUALIZATIONS COMPLETE!
+================================================================================
+
+Next step: Compare with attention using compare_concat_vs_attention.py
