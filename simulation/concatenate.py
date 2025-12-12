@@ -46,8 +46,8 @@ def concat_adata(
     #     np.linalg.norm(cluster_centers[:, None] - cluster_centers[None, :], axis=2)
     # )
     # adata_combined.uns["cluster_rank"] = cluster_rank[:, 1:]
-    adata_combined.write(f"newadata/adata_combined_{output_name}.h5ad")
-    _LOGGER.info(f"Combined adata saved: newadata/adata_combined_{output_name}.h5ad")
+    adata_combined.write(f"newadata_delta/adata_combined_{output_name}.h5ad")
+    _LOGGER.info(f"Combined adata saved: newadata_delta/adata_combined_{output_name}.h5ad")
     return adata_combined
 
 _LOGGER = logging.getLogger(__name__)
@@ -103,9 +103,9 @@ if __name__ == "__main__":
     _LOGGER.info("Norm UMAP computed")
     
     fig, axes = plt.subplots(
-            nrows=3,
+            nrows=4,
             ncols=1,
-            figsize=(4, 3*3)
+            figsize=(4, 3*4)
         )
     
     sc.pl.embedding(
@@ -132,6 +132,15 @@ if __name__ == "__main__":
         color="cluster_true",
         show=False,
         ax=axes[2],
+        size=30
+    )
+    #--- Row 4 ---
+    sc.pl.embedding(
+        adata_norm,
+        basis="X_norm_umap",
+        color="latent_t",
+        show=False,
+        ax=axes[3],
         size=30
     )
     plt.tight_layout()
