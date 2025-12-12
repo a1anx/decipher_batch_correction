@@ -38,5 +38,6 @@ Bone_Marrow_Hematopoiesis/*.png
 Bone_Marrow_Hematopoiesis/*.txt
 *_bonemarrowmap*.h5ad
 *_BoneMarrowMap*.h5ad
+Real Data
 
 # Keep simulation data tracked (already committed, small ~3MB)
