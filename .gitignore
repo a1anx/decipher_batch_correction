@@ -33,12 +33,9 @@ venv/
 
 # Real data - large h5ad files (DO NOT commit)
 # Only ignore .h5ad files in Bone_Marrow_Hematopoiesis, but keep .py scripts
-Bone_Marrow_Hematopoiesis/*.h5ad
-Bone_Marrow_Hematopoiesis/*.png
-Bone_Marrow_Hematopoiesis/*.txt
-Bone_Marrow_Hematopoiesis/Medium_Dataset_Analysis/*.h5ad
-Bone_Marrow_Hematopoiesis/Medium_Dataset_Analysis/*.png
-Bone_Marrow_Hematopoiesis/Medium_Dataset_Analysis/*.txt
+Bone_Marrow_Hematopoiesis/**/*.h5ad
+Bone_Marrow_Hematopoiesis/**/*.png
+Bone_Marrow_Hematopoiesis/**/*.txt
 *_bonemarrowmap*.h5ad
 *_BoneMarrowMap*.h5ad
 Real Data
