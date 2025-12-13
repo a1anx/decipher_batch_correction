@@ -90,8 +90,8 @@ def compute_batch_mixing_metrics(adata, batch_key='delta', z_key='X_decipher_bat
             metrics['cluster_ari'] = np.nan
 
     # 4. Mean attention strength (if available)
-    if 'batch_attention_strength' in adata.obs.columns:
-        metrics['mean_attention_strength'] = adata.obs['batch_attention_strength'].mean()
+    #if 'batch_attention_strength' in adata.obs.columns:
+    #    metrics['mean_attention_strength'] = adata.obs['batch_attention_strength'].mean()
 
     return metrics
 
@@ -166,13 +166,12 @@ def plot_titration_curves(results_df, out_folder):
     sns.set_style("whitegrid")
 
     # Create comprehensive figure with subplots
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
 
     metrics_to_plot = [
         ('batch_silhouette', 'Batch Silhouette Score', 'Lower = Better Mixing'),
         ('pseudotime_correlation', 'Pseudotime Correlation', 'Higher = Better Biological Preservation'),
         ('cluster_ari', 'Cluster ARI', 'Higher = Better Structure Preservation'),
-        ('mean_attention_strength', 'Mean Attention Strength', 'Model Batch Correction Effort'),
     ]
 
     for ax, (metric, title, subtitle) in zip(axes.flat, metrics_to_plot):
@@ -194,40 +193,11 @@ def plot_titration_curves(results_df, out_folder):
         ax.set_title(f'{title}\n{subtitle}', fontsize=12, fontweight='bold')
         ax.legend(fontsize=10)
         ax.grid(True, alpha=0.3)
-        ax.set_xscale('log')
+        #ax.set_xscale('log')
 
     plt.tight_layout()
     plt.savefig(f"{out_folder}/titration_curves_all_metrics.png", dpi=300, bbox_inches='tight')
     print(f"✓ Saved: {out_folder}/titration_curves_all_metrics.png")
-    plt.close()
-
-    # Create focused plot on silhouette score (main metric)
-    fig, ax = plt.subplots(figsize=(10, 6))
-
-    for method in ['original', 'batch_corrected']:
-        data = results_df[results_df['method'] == method].sort_values('magnitude')
-        if data.empty:
-            continue
-
-        label = 'Original Decipher' if method == 'original' else 'Batch-Corrected Decipher'
-        marker = 'o' if method == 'original' else 's'
-        color = '#d62728' if method == 'original' else '#2ca02c'
-
-        ax.plot(data['magnitude'], data['batch_silhouette'], marker=marker, label=label,
-               linewidth=3, markersize=10, alpha=0.8, color=color)
-
-    ax.axhline(y=0, color='gray', linestyle='--', alpha=0.5, label='Perfect Mixing')
-    ax.set_xlabel('Magnitude (Batch Effect Scale)', fontsize=13, fontweight='bold')
-    ax.set_ylabel('Batch Silhouette Score', fontsize=13, fontweight='bold')
-    ax.set_title('Batch Correction Performance vs Magnitude\n(Lower = Better Batch Mixing)',
-                fontsize=14, fontweight='bold', pad=15)
-    ax.legend(fontsize=11)
-    ax.grid(True, alpha=0.3)
-    ax.set_xscale('log')
-
-    plt.tight_layout()
-    plt.savefig(f"{out_folder}/silhouette_titration.png", dpi=300, bbox_inches='tight')
-    print(f"✓ Saved: {out_folder}/silhouette_titration.png")
     plt.close()
 
     # Calculate and plot improvement
@@ -247,7 +217,7 @@ def plot_titration_curves(results_df, out_folder):
                     fontsize=14, fontweight='bold', pad=15)
         ax.legend(fontsize=11)
         ax.grid(True, alpha=0.3)
-        ax.set_xscale('log')
+        #ax.set_xscale('log')
 
         # Shade region where improvement is positive
         ax.fill_between(improvement.index, 0, improvement.values,
@@ -262,19 +232,19 @@ def plot_titration_curves(results_df, out_folder):
 
 
 if __name__ == "__main__":
-    #magnitudes = [0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 3.0, 5.0]
+    magnitudes = [0.05, 0.02, 0.1, 0.2, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0, 5.0]
     version = "test"
-    magnitudes = [0.05, 0.1, 3.0]
-    deltas = np.array([1.0, 2.0])
+    deltas = np.array([1.0, 2.0, 3.0])
     out_folder = "delta_titration/results"
     adata_folder = "delta_titration/adata"
     results = []
-    for output_name, mag in enumerate(magnitudes):
+    for mag in magnitudes:
         # print(output_name)
         # print(mag)
-        temp = mag * deltas
+        temp = [0]
+        temp = temp + list(mag * deltas)
         # print(temp)
-    #     
+        output_name = str(temp)
         _LOGGER.info(f"Magnitude = {mag}")
         _LOGGER.info(f"Deltas = {temp}")
         adata_concat = delta_magnitudes(out_folder = out_folder,
@@ -285,19 +255,20 @@ if __name__ == "__main__":
                                         )
         # run baseline methods (original decipher, umap)
         latent_spaces = run_methods(adata_concat, seed=params.SEED)
-        # Compute metrics on original Decipher
-        # _LOGGER.info(f"Computing metrics on original Decipher...")
-        # original_metrics = compute_batch_mixing_metrics(
-        #     adata_concat,
-        #     batch_key='delta',
-        #     z_key='decipher_decipher_z'
-        # )
-        # original_metrics['magnitude'] = mag
-        # original_metrics['max_delta'] = max(deltas)
-        # original_metrics['increment'] = mag
-        # original_metrics['method'] = 'original'
         
-        # results.append(original_metrics)
+        # Compute metrics on original Decipher
+        _LOGGER.info(f"Computing metrics on original Decipher...")
+        original_metrics = compute_batch_mixing_metrics(
+            adata_concat,
+            batch_key='delta',
+            z_key='decipher_decipher_z'
+        )
+        original_metrics['magnitude'] = mag
+        original_metrics['max_delta'] = max(deltas)
+        original_metrics['increment'] = mag
+        original_metrics['method'] = 'original'
+        
+        results.append(original_metrics)
         
         # train batch-corrected decipher
         config = DecipherBatchCorrectedConfig(

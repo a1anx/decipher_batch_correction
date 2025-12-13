@@ -450,6 +450,7 @@ def run_delta_shift(
         combined_embeddings(adata_sim=adata_sim,
                             out_folder=out_folder, 
                             delta=delta)
+        return adata_sim
     
 _LOGGER = logging.getLogger(__name__)
 
