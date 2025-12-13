@@ -23,17 +23,35 @@ from sklearn.metrics import silhouette_score
 parser = argparse.ArgumentParser(description='Visualize BoneMarrowMap subset batch correction results')
 parser.add_argument('--subset', type=str, default='medium', choices=['small', 'medium'],
                    help='Which subset to visualize: small or medium')
+parser.add_argument('--epochs', type=int, default=None,
+                   help='Number of epochs used in training (for file naming)')
 args = parser.parse_args()
 
 # Configuration
 if args.subset == 'small':
-    input_file = "bonemarrowmap_small_batch_corrected.h5ad"
-    prefix = "bonemarrowmap_small"
+    if args.epochs and args.epochs >= 100:
+        input_file = f"Full_Training/bonemarrowmap_small_{args.epochs}epochs_batch_corrected.h5ad"
+        prefix = f"bonemarrowmap_small_{args.epochs}epochs"
+        output_dir = "Full_Training"
+    else:
+        input_file = "bonemarrowmap_small_batch_corrected.h5ad"
+        prefix = "bonemarrowmap_small"
+        output_dir = "."
     subset_desc = "SMALL (20k cells)"
 else:
-    input_file = "bonemarrowmap_medium_batch_corrected.h5ad"
-    prefix = "bonemarrowmap_medium"
+    if args.epochs and args.epochs >= 100:
+        input_file = f"Full_Training/bonemarrowmap_medium_{args.epochs}epochs_batch_corrected.h5ad"
+        prefix = f"bonemarrowmap_medium_{args.epochs}epochs"
+        output_dir = "Full_Training"
+    else:
+        input_file = "bonemarrowmap_medium_batch_corrected.h5ad"
+        prefix = "bonemarrowmap_medium"
+        output_dir = "."
     subset_desc = "MEDIUM (90k cells)"
+
+# Add epochs to description if specified
+if args.epochs:
+    subset_desc += f" - {args.epochs} Epochs"
 
 print("=" * 80)
 print(f"BONEMARROWMAP VISUALIZATION - {subset_desc}")
@@ -218,8 +236,9 @@ else:
 
 plt.tight_layout()
 output1 = f'{prefix}_batch_correction_comparison.png'
-plt.savefig(output1, dpi=300, bbox_inches='tight')
-print(f"  ✓ Saved: {output1}")
+output1_path = os.path.join(output_dir, output1)
+plt.savefig(output1_path, dpi=300, bbox_inches='tight')
+print(f"  ✓ Saved: {output1_path}")
 plt.close()
 
 # =====================================================================
@@ -265,8 +284,9 @@ else:
 
 plt.tight_layout()
 output2 = f'{prefix}_attention_analysis.png'
-plt.savefig(output2, dpi=300, bbox_inches='tight')
-print(f"  ✓ Saved: {output2}")
+output2_path = os.path.join(output_dir, output2)
+plt.savefig(output2_path, dpi=300, bbox_inches='tight')
+print(f"  ✓ Saved: {output2_path}")
 plt.close()
 
 # =====================================================================
@@ -361,8 +381,9 @@ if cell_type_key:
 
     plt.tight_layout()
     output3 = f'{prefix}_biological_preservation.png'
-    plt.savefig(output3, dpi=300, bbox_inches='tight')
-    print(f"  ✓ Saved: {output3}")
+    output3_path = os.path.join(output_dir, output3)
+    plt.savefig(output3_path, dpi=300, bbox_inches='tight')
+    print(f"  ✓ Saved: {output3_path}")
     plt.close()
 else:
     print("\n  Skipping biological signal plot (no cell type column)")

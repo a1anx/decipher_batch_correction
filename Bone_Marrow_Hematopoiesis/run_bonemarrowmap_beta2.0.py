@@ -1,14 +1,16 @@
 """
-Run batch-corrected Decipher on BoneMarrowMap SUBSET - Local Machine Version
+Run batch-corrected Decipher with beta=2.0 - Local Machine Version
 
-This script:
-1. Loads a preprocessed subset (small: 20k or medium: 90k cells)
-2. Auto-detects batch/donor information
-3. Trains the batch-corrected Decipher model
-4. Extracts embeddings and attention weights
-5. Saves results for visualization
+This script uses beta=2.0 for even stronger KL divergence regularization.
+Testing if doubling beta (from 1.0 to 2.0) further improves V-space structure.
 
-Optimized for local machine with limited resources.
+Differences from regular script:
+- beta=2.0 (double the previous best of 1.0)
+- batch_emb_dim=64 (keeping from best previous run)
+- decoder_hidden_dims=[] (keeping simplified decoder)
+- n_attention_heads=4 (keeping default)
+- combination_mode="concat" (keeping for stability)
+- Outputs to Beta_2.0_Training/ folder
 """
 
 import scanpy as sc
@@ -24,8 +26,8 @@ from decipher_batch_corrected import DecipherBatchCorrectedConfig
 from train_batch_corrected import train_batch_corrected_decipher, evaluate_batch_correction
 
 # Parse arguments
-parser = argparse.ArgumentParser(description='Train batch-corrected Decipher on BoneMarrowMap subset')
-parser.add_argument('--subset', type=str, default='medium', choices=['small', 'medium'],
+parser = argparse.ArgumentParser(description='Train batch-corrected Decipher with beta=2.0')
+parser.add_argument('--subset', type=str, default='small', choices=['small', 'medium'],
                    help='Which subset to use: small (20k cells, quick test) or medium (90k cells, full training)')
 parser.add_argument('--epochs', type=int, default=None,
                    help='Number of epochs (default: 50 for small, 150 for medium)')
@@ -45,11 +47,13 @@ else:  # medium
 
 n_epochs = args.epochs if args.epochs is not None else default_epochs
 
-# Set output file name based on epochs used
-output_file = f"bonemarrowmap_{args.subset}_{n_epochs}epochs_batch_corrected.h5ad"
+# Set output file name and directory
+output_dir = "Beta_2.0_Training"
+os.makedirs(output_dir, exist_ok=True)
+output_file = f"bonemarrowmap_{args.subset}_{n_epochs}epochs_beta2.0.h5ad"
 
 print("=" * 80)
-print(f"BATCH-CORRECTED DECIPHER - {subset_desc}")
+print(f"BATCH-CORRECTED DECIPHER (beta=2.0) - {subset_desc}")
 print("=" * 80)
 
 # Step 1: Load preprocessed data
@@ -126,7 +130,7 @@ except:
     device = 'cpu'
     print(f"  Device: CPU (no GPU available)")
 
-# Configure for subset size
+# Configure for subset size with beta=2.0
 config = DecipherBatchCorrectedConfig(
     # Latent dimensions
     dim_z=10,                       # Match original Decipher
@@ -134,12 +138,13 @@ config = DecipherBatchCorrectedConfig(
 
     # Batch correction parameters
     n_batches=None,                 # Will be set from data
-    batch_emb_dim=64,               # Batch embedding dimension
+    batch_emb_dim=64,               # Keep at 64
     decoder_hidden_dims=[],         # Single linear layer (like regular Decipher)
-    n_attention_heads=4,            # Multi-head attention
-    combination_mode="concat",      # Concatenate z and batch effect
+    n_attention_heads=4,            # Keep at 4
+    combination_mode="concat",      # CONCAT mode (stable)
 
-    # Training parameters (optimized for local machine)
+    # Training parameters (beta=2.0 is the key change)
+    beta=2.0,                       # DOUBLED from 1.0 to 2.0 (very strong regularization)
     learning_rate=5e-3,
     batch_size=batch_size,
     n_epochs=n_epochs,
@@ -156,6 +161,8 @@ print(f"    - Component v dimension: {config.dim_v}")
 print(f"    - Batch embedding dimension: {config.batch_emb_dim}")
 print(f"    - Decoder hidden layers: {config.decoder_hidden_dims}")
 print(f"    - Attention heads: {config.n_attention_heads}")
+print(f"    - Combination mode: {config.combination_mode} (CONCAT)")
+print(f"    - Beta (KL weight): {config.beta} (VERY STRONG regularization - double 1.0)")
 print(f"  Dataset:")
 print(f"    - Cells: {config.n_cells:,}")
 print(f"    - Genes: {config.dim_genes:,}")
@@ -179,6 +186,7 @@ print(f"  (Early stopping will likely finish sooner)")
 # Step 4: Train model
 print("\n[4/5] Training model...")
 print(f"  Training on {device.upper()} with {args.subset.upper()} subset")
+print(f"  Using beta={config.beta} (very strong regularization)")
 print(f"  This will take approximately {est_time_per_epoch * config.n_epochs:.0f} minutes")
 print(f"  Progress will be shown every epoch")
 print()
@@ -221,15 +229,7 @@ print("✓ UMAP computed on batch-corrected embeddings")
 
 # Save results
 print("\nSaving results...")
-
-# Create output directory if using non-default epochs
-if n_epochs >= 100:
-    output_dir = "Full_Training"
-    os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.join(output_dir, output_file)
-else:
-    output_path = output_file
-
+output_path = os.path.join(output_dir, output_file)
 adata.write(output_path)
 print(f"✓ Results saved to: {output_path}")
 
@@ -243,23 +243,20 @@ ax.plot(epochs, losses['train_losses'], label='Training Loss', linewidth=2)
 ax.plot(epochs, losses['val_losses'], label='Validation Loss', linewidth=2)
 ax.set_xlabel('Epoch', fontsize=12)
 ax.set_ylabel('Loss', fontsize=12)
-ax.set_title(f'Training and Validation Loss ({args.subset.upper()} subset)', fontsize=14, fontweight='bold')
+ax.set_title(f'Training and Validation Loss - beta=2.0 ({args.subset.upper()} subset)', fontsize=14, fontweight='bold')
 ax.legend(fontsize=11)
 ax.grid(True, alpha=0.3)
 plt.tight_layout()
 
-loss_file = f'bonemarrowmap_{args.subset}_{n_epochs}epochs_loss_curves.png'
-if n_epochs >= 100:
-    loss_file_path = os.path.join(output_dir, loss_file)
-else:
-    loss_file_path = loss_file
+loss_file = f'bonemarrowmap_{args.subset}_{n_epochs}epochs_beta2.0_loss_curves.png'
+loss_file_path = os.path.join(output_dir, loss_file)
 plt.savefig(loss_file_path, dpi=300, bbox_inches='tight')
 print(f"✓ Loss curves saved to: {loss_file_path}")
 plt.close()
 
 # Print summary statistics
 print("\n" + "=" * 80)
-print("TRAINING SUMMARY")
+print("TRAINING SUMMARY (beta=2.0)")
 print("=" * 80)
 
 print(f"\n📊 Model Performance:")
@@ -280,11 +277,11 @@ for i, (batch_id, attn) in enumerate(batch_attention.head(10).items(), 1):
     print(f"  {i:2d}. {str(batch_id):30s}: {attn:.4f} ({n_cells:,} cells)")
 
 print("\n" + "=" * 80)
-print("OUTPUTS SAVED")
+print("OUTPUTS SAVED TO Beta_2.0_Training/")
 print("=" * 80)
 
 print(f"\n1. {output_file}")
-print(f"   - AnnData object with batch-corrected embeddings")
+print(f"   - AnnData object with beta=2.0 batch-corrected embeddings")
 print(f"   - Contains:")
 print(f"     • adata.obsm['X_decipher_batch_corrected_z']: Latent representation (10D)")
 print(f"     • adata.obsm['X_decipher_batch_corrected_v']: Component representation (2D)")
@@ -295,18 +292,5 @@ print(f"\n2. {loss_file}")
 print(f"   - Training and validation loss curves")
 
 print("\n" + "=" * 80)
-print("NEXT STEPS")
-print("=" * 80)
-
-print("\n1. Visualize batch correction results:")
-print(f"   python visualize_bonemarrowmap_subset.py --subset {args.subset}")
-
-print("\n2. Try the other subset size:")
-if args.subset == 'small':
-    print(f"   python run_bonemarrowmap_subset_analysis.py --subset medium")
-else:
-    print(f"   python run_bonemarrowmap_subset_analysis.py --subset small")
-
-print("\n" + "=" * 80)
-print("✓ TRAINING COMPLETE!")
+print("✓ TRAINING COMPLETE (beta=2.0)!")
 print("=" * 80)

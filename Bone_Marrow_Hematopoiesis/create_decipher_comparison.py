@@ -8,7 +8,7 @@ This script:
 4. Colors V space by pseudotime
 
 Usage:
-    python create_decipher_comparison.py
+    python create_decipher_comparison.py [--epochs EPOCHS]
 """
 
 import scanpy as sc
@@ -16,15 +16,35 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.gridspec import GridSpec
+import argparse
+import os
+
+# Parse arguments
+parser = argparse.ArgumentParser(description='Create Decipher comparison visualization')
+parser.add_argument('--epochs', type=int, default=None,
+                   help='Number of epochs used in batch-corrected training (for file naming)')
+args = parser.parse_args()
+
+# Set file paths and output directory
+if args.epochs and args.epochs >= 100:
+    bc_file = f"Full_Training/bonemarrowmap_small_{args.epochs}epochs_batch_corrected.h5ad"
+    output_file = f"bonemarrowmap_small_{args.epochs}epochs_decipher_comparison.png"
+    output_dir = "Full_Training"
+    epochs_desc = f" ({args.epochs} Epochs)"
+else:
+    bc_file = "bonemarrowmap_small_batch_corrected.h5ad"
+    output_file = "bonemarrowmap_small_decipher_comparison.png"
+    output_dir = "."
+    epochs_desc = ""
 
 print("=" * 80)
-print("DECIPHER COMPARISON: Regular vs Batch-Corrected")
+print(f"DECIPHER COMPARISON: Regular vs Batch-Corrected{epochs_desc}")
 print("=" * 80)
 
 # Load both datasets
 print("\n[1/5] Loading data...")
 adata_regular = sc.read_h5ad("bonemarrowmap_small_regular_decipher.h5ad")
-adata_bc = sc.read_h5ad("bonemarrowmap_small_batch_corrected.h5ad")
+adata_bc = sc.read_h5ad(bc_file)
 print(f"✓ Regular Decipher: {adata_regular.shape[0]:,} cells")
 print(f"✓ Batch-corrected Decipher: {adata_bc.shape[0]:,} cells")
 
@@ -245,19 +265,19 @@ plot_embedding(ax, adata_bc, 'X_decipher_batch_corrected_v', 'pseudotime',
               f'By Pseudotime')
 
 # Add overall title
-fig.suptitle('Decipher Comparison: Regular vs Batch-Corrected\nBoneMarrowMap SMALL Subset (20k cells)',
-            fontsize=14, fontweight='bold', y=0.995)
+title_text = f'Decipher Comparison: Regular vs Batch-Corrected{epochs_desc}\nBoneMarrowMap SMALL Subset (20k cells)'
+fig.suptitle(title_text, fontsize=14, fontweight='bold', y=0.995)
 
 # Save
-output_file = "bonemarrowmap_small_decipher_comparison.png"
-plt.savefig(output_file, dpi=300, bbox_inches='tight')
-print(f"✓ Saved comparison plot: {output_file}")
+output_path = os.path.join(output_dir, output_file)
+plt.savefig(output_path, dpi=300, bbox_inches='tight')
+print(f"✓ Saved comparison plot: {output_path}")
 plt.close()
 
 # Save updated datasets with pseudotime
 print("\n[4/5] Saving datasets with pseudotime...")
 adata_regular.write_h5ad("bonemarrowmap_small_regular_decipher.h5ad")
-adata_bc.write_h5ad("bonemarrowmap_small_batch_corrected.h5ad")
+adata_bc.write_h5ad(bc_file)
 print("✓ Updated datasets saved")
 
 # Print summary metrics
