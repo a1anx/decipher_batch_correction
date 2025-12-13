@@ -1,0 +1,19 @@
+# Exclude experimental training directories (not needed for final results)
+Full_Training/
+BatchEmbdDim_16_Training/
+AttentionHeads_2_Training/
+AttentionHeads_1_Training/
+Beta_0.5_Training/
+Beta_2.0_Training/
+
+# Exclude large h5ad files in key training directories
+Initial_Training/*.h5ad
+Beta_1.0_Training/*.h5ad
+Beta_1.0_AttentionHeads_2_Training/*.h5ad
+Decipher_BC_Concat_Training/*.h5ad
+
+# Keep the comparison figures and other analysis files
+!Initial_Training/*.png
+!Beta_1.0_Training/*.png
+!Beta_1.0_AttentionHeads_2_Training/*.png
+!Decipher_BC_Concat_Training/*.png
