@@ -34,7 +34,7 @@ from train_batch_corrected import train_batch_corrected_decipher, evaluate_batch
 _LOGGER = logging.getLogger(__name__)
 
 
-def compute_batch_mixing_metrics(adata, batch_key='delta', z_key='X_decipher_batch_corrected_z'):
+def compute_batch_mixing_metrics(adata, batch_key='shift', z_key='X_decipher_batch_corrected_z'):
     """
     Compute comprehensive metrics to assess batch mixing quality.
 
@@ -96,21 +96,23 @@ def compute_batch_mixing_metrics(adata, batch_key='delta', z_key='X_decipher_bat
     return metrics
 
 
-def delta_magnitudes(
+def shift_magnitudes(
     out_folder,
     adata_folder,
     output_name,
-    deltas,
+    shift_type,
+    shifts,
     mag
 ):
     os.makedirs(out_folder, exist_ok=True)
     os.makedirs(adata_folder, exist_ok=True)
-    delta_vec = mag * deltas
+    shift_vec = mag * shifts
     
-    # Unshifted Base (delta=0)
+    # Unshifted Base (shift=0)
     adata_base = simulation_correlated_shift(
         **SIMUL_PARAMS,
-        delta=0,
+        shift_type="none",
+        shift=0,
     )
     ground_truth_clusters = adata_base.obs["cluster_true"]
     ground_truth_cluster_rank = adata_base.uns["cluster_rank"] 
@@ -121,15 +123,15 @@ def delta_magnitudes(
     # adata_base.write(f"{adata_folder}/adata_base.h5ad")
     # _LOGGER.info(f"Adata saved: {adata_folder}/adata_base.h5ad")
     
-    #combined_embeddings(adata_base, out_folder, delta=0)
     
     adata_concat = adata_base.copy()
 
     # Shifted adatas
-    for delta in delta_vec:
+    for shift in shift_vec:
         adata_sim = simulation_correlated_shift(
             **SIMUL_PARAMS,
-            delta=delta,
+            shift_type=shift_type,
+            shift=shift,
         )
         # override the clusters
         adata_sim.obs["cluster_true"] = ground_truth_clusters
@@ -142,23 +144,23 @@ def delta_magnitudes(
                                     join="outer", label=None, merge="same")
 
         # _LOGGER.info(f"Latent spaces: {latent_spaces}")
-        # adata_sim.write(f"{adata_folder}/adata_shift_delta_{delta}.h5ad")
-        # _LOGGER.info(f"Adata saved: {adata_folder}/adata_shift_delta_{delta}.h5ad")
+        # adata_sim.write(f"{adata_folder}/adata_shift_shift_{shift}.h5ad")
+        # _LOGGER.info(f"Adata saved: {adata_folder}/adata_shift_shift_{shift}.h5ad")
 
         # (Optional) keep only 2D spaces if you want pure visual spaces
         # latent_spaces_2d = [k for k in latent_spaces if adata_sim.obsm[k].shape[1] == 2]
         
-        # combined_embeddings(adata_sim=adata_sim, out_folder=out_folder, delta=delta)
+        # combined_embeddings(adata_sim=adata_sim, out_folder=out_folder, shift=shift)
 
-    adata_concat.write(os.path.join(adata_folder, f"adata_combined_{output_name}.h5ad"))
-    _LOGGER.info(f"Combined adata saved: {adata_folder}/adata_combined_{output_name}.h5ad")
+    adata_concat.write(os.path.join(adata_folder, f"adata_combined_{shift_type}_{output_name}.h5ad"))
+    _LOGGER.info(f"Combined adata saved: {adata_folder}/adata_combined_{shift_type}_{output_name}.h5ad")
 
         # print(adata_concat.obsm.keys())
     ## done with adata_concat for one magnitude
     return adata_concat
 
 
-def plot_titration_curves(results_df, out_folder):
+def plot_titration_curves(results_df, out_folder, shift_type):
     """
     Plot titration curves showing batch correction performance vs magnitude.
     """
@@ -196,8 +198,8 @@ def plot_titration_curves(results_df, out_folder):
         #ax.set_xscale('log')
 
     plt.tight_layout()
-    plt.savefig(f"{out_folder}/titration_curves_all_metrics.png", dpi=300, bbox_inches='tight')
-    print(f"✓ Saved: {out_folder}/titration_curves_all_metrics.png")
+    plt.savefig(f"{out_folder}/titration_curves_{shift_type}_all_metrics.png", dpi=300, bbox_inches='tight')
+    print(f"✓ Saved: {out_folder}/titration_curves_{shift_type}_all_metrics.png")
     plt.close()
 
     # Calculate and plot improvement
@@ -225,32 +227,33 @@ def plot_titration_curves(results_df, out_folder):
                         label='Effective Batch Correction')
 
         plt.tight_layout()
-        plt.savefig(f"{out_folder}/improvement_titration.png", dpi=300, bbox_inches='tight')
-        print(f"✓ Saved: {out_folder}/improvement_titration.png")
+        plt.savefig(f"{out_folder}/{shift_type}_improvement_titration.png", dpi=300, bbox_inches='tight')
+        print(f"✓ Saved: {out_folder}/{shift_type}_improvement_titration.png")
         plt.close()
 
 
-
-if __name__ == "__main__":
-    magnitudes = [0.05, 0.02, 0.1, 0.2, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0, 5.0]
-    version = "test"
-    deltas = np.array([1.0, 2.0, 3.0])
-    out_folder = "delta_titration/results"
-    adata_folder = "delta_titration/adata"
+def run_titration(
+    shift_type,
+    magnitudes,
+    shifts,
+    out_folder,
+    adata_folder,
+):
     results = []
     for mag in magnitudes:
         # print(output_name)
         # print(mag)
         temp = [0]
-        temp = temp + list(mag * deltas)
+        temp = temp + list(mag * shifts)
         # print(temp)
         output_name = str(temp)
         _LOGGER.info(f"Magnitude = {mag}")
-        _LOGGER.info(f"Deltas = {temp}")
-        adata_concat = delta_magnitudes(out_folder = out_folder,
+        _LOGGER.info(f"{shift_type} = {temp}")
+        adata_concat = shift_magnitudes(out_folder = out_folder,
                                         adata_folder = adata_folder,
                                         output_name = output_name,
-                                        deltas = deltas,
+                                        shift_type = shift_type,
+                                        shifts = shifts,
                                         mag = mag
                                         )
         # run baseline methods (original decipher, umap)
@@ -260,11 +263,11 @@ if __name__ == "__main__":
         _LOGGER.info(f"Computing metrics on original Decipher...")
         original_metrics = compute_batch_mixing_metrics(
             adata_concat,
-            batch_key='delta',
+            batch_key='shift',
             z_key='decipher_decipher_z'
         )
         original_metrics['magnitude'] = mag
-        original_metrics['max_delta'] = max(deltas)
+        original_metrics['max_shift'] = max(shifts)
         original_metrics['increment'] = mag
         original_metrics['method'] = 'original'
         
@@ -285,41 +288,70 @@ if __name__ == "__main__":
                     early_stopping_patience=15
                 )
 
-        config.initialize_from_adata(adata_concat, batch_key='delta')
+        config.initialize_from_adata(adata_concat, batch_key='shift')
 
         model, losses = train_batch_corrected_decipher(
             adata_concat,
-            batch_key='delta',
+            batch_key='shift',
             config=config,
             device='cpu'
         )
 
         # Extract batch-corrected embeddings
-        bc_results = evaluate_batch_correction(model, adata_concat, batch_key='delta', device='cpu')
+        bc_results = evaluate_batch_correction(model, adata_concat, batch_key='shift', device='cpu')
         adata_concat.obsm['X_decipher_batch_corrected_z'] = bc_results['z']
         adata_concat.obsm['X_decipher_batch_corrected_v'] = bc_results['v']
         adata_concat.obs['batch_attention_strength'] = bc_results['attention_weights'].mean(axis=(1, 2, 3))
 
-        print(f"✓ Training complete (final loss: {losses['val_losses'][-1]:.2f})")
+        _LOGGER.info(f"Training complete (final loss: {losses['val_losses'][-1]:.2f})")
 
         # Compute metrics on batch-corrected embeddings
-        print(f"\n[Step 5/5] Computing batch-corrected metrics...")
         bc_metrics = compute_batch_mixing_metrics(
             adata_concat,
-            batch_key='delta',
+            batch_key='shift',
             z_key='X_decipher_batch_corrected_z'
         )
         bc_metrics['magnitude'] = mag
-        bc_metrics['max_delta'] = max(deltas)
+        bc_metrics['max_shift'] = max(shifts)
         bc_metrics['increment'] = mag
         bc_metrics['method'] = 'batch_corrected'
         results.append(bc_metrics)
     
     results_df = pd.DataFrame(results)
-    results_df.to_csv(f"{out_folder}/titration_metrics_{version}.csv", index=False)
-    print(f"Saved metrics: {out_folder}/titration_metrics_{version}.csv")
+    results_df.to_csv(f"{out_folder}/{shift_type}_titration_metrics_{version}.csv", index=False)
+    print(f"Saved metrics: {out_folder}/{shift_type}_titration_metrics_{version}.csv")
+    return results_df
+    
+
+
+if __name__ == "__main__":
+    
+    magnitudes = [0.05, 0.02, 0.1, 0.2, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0, 5.0]
+    version = "1"
+    shifts = np.array([1.0, 2.0, 3.0])
+    out_folder = "titration/results"
+    adata_folder = "titration/adata"
+    
+    # alpha
+    shift_type = "alpha"
+    results_df = run_titration(shift_type,
+                  magnitudes,
+                  shifts,
+                  out_folder,
+                  adata_folder)
         
-    plot_titration_curves(results_df, out_folder)
+    plot_titration_curves(results_df, out_folder, shift_type="alpha")
+    
+    # delta
+    shift_type = "delta"
+    results_df = run_titration(shift_type,
+                  magnitudes,
+                  shifts,
+                  out_folder,
+                  adata_folder)
+        
+    plot_titration_curves(results_df, out_folder, shift_type="delta")
+    
         
         
     

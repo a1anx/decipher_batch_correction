@@ -47,89 +47,6 @@ class RandomNet(nn.Module):
         return x
 
 
-def simulation_correlated_shift(
-    n_samples=500,
-    n_genes=50,
-    seed=0,
-    sigma=0.03,
-    branch_prob=0.7,
-    k_clusters=20,
-    hole_size=0,
-    n_holes=0,
-    hole_density=0.0,
-    delta: float = 0.0, # linear shift
-) -> sc.AnnData:
-    np.random.seed(seed=seed)
-
-    chunk_size = np.array([1, hole_size] * n_holes + [1])
-    chunk_offset = np.cumsum(chunk_size) - chunk_size[0]
-    chunk_prob = np.array([1, hole_size * hole_density] * n_holes + [1])
-    chunk_prob = chunk_prob / chunk_prob.sum()
-    total_size = sum(chunk_size)
-    # sample which chunk the latent time is in
-    chunk = np.random.choice(np.arange(len(chunk_prob)), size=(n_samples,), p=chunk_prob)
-    # sample the latent time within the chunk
-    latent_t_chunk = np.random.uniform(0, 1, size=(n_samples,))
-    latent_t = latent_t_chunk * chunk_size[chunk] + chunk_offset[chunk]
-    latent_t = latent_t / total_size
-    latent_t = latent_t[:, None]
-
-    # branching
-    branching_t1 = 0.3
-    branching_t2 = 0.5
-    branch_id = np.random.binomial(1, branch_prob, size=(n_samples, 1)) * 2 - 1
-    branch_id = branch_id * (latent_t > branching_t1)
-
-    z1 = latent_t * total_size
-    z5 = branch_id * (latent_t - branching_t1)
-    z3 = (branch_id == 1) * np.clip(latent_t - 0.3, 0, 0.5)
-    z4 = (branch_id == 1) * np.clip(latent_t - branching_t2, 0, branching_t1)
-    z2 = (branch_id >= 0) * (np.clip(latent_t - 0.2, 0, 0.5) - np.clip(latent_t - 0.5, 0, 0.5))
-
-    # Create latent_z
-    latent_z = np.concatenate([z1, z3, z5], axis=1)
-    latent_z_sampled = np.random.normal(latent_z, sigma)
-    latent_z_sampled[:, 0] /= total_size
-    
-    # apply the uniform shift
-    latent_z_sampled[:, 0] += delta
-
-    net = RandomNet(
-        latent_z_sampled.shape[1],
-        n_genes,
-    )
-    data = net(torch.tensor(latent_z_sampled).float()).detach().numpy().astype(int)
-
-    adata_sim = sc.AnnData(data)
-    adata_sim.obs["latent_t"] = latent_t
-    adata_sim.obs["branch_id"] = branch_id
-    adata_sim.obsm["latent_z"] = latent_z
-    
-    k_means = KMeans(k_clusters)
-    k_means.fit(latent_z)
-    adata_sim.obs["cluster_true"] = k_means.labels_
-
-    for i in range(latent_z.shape[1]):
-        adata_sim.obs[f"latent_z{i}"] = latent_z[:, i]
-    adata_sim.obsm["latent"] = latent_z_sampled
-    latent_names = [f"latent_z{i}" for i in range(latent_z.shape[1])]
-    adata_sim.uns["latent_z_names"] = latent_names
-
-    # for each cluster, order the other clusters by distance of their kmeans center
-    cluster_centers = k_means.cluster_centers_
-    cluster_rank = np.argsort(
-        np.linalg.norm(cluster_centers[:, None] - cluster_centers[None, :], axis=2)
-    )
-    adata_sim.uns["cluster_rank"] = cluster_rank[:, 1:]
-    
-    adata_sim.obs["delta"] = f"{delta}"
-
-    return adata_sim
-
-
-
-
-
 def run_methods(adata, seed=0):
     latent_spaces = []
     
@@ -143,17 +60,9 @@ def run_methods(adata, seed=0):
     _LOGGER.info("Computing UMAP on normalized data")
     sc.pp.neighbors(adata_norm, random_state=seed)
     sc.tl.umap(adata_norm, random_state=seed)
-    adata.obsm["X_norm_umap"] = adata_norm.obsm["X_umap"]
+    adata.obsm["X_umap"] = adata_norm.obsm["X_umap"]
     latent_spaces.append("X_norm_umap")
     _LOGGER.info("Norm UMAP computed")
-
-    # Compute UMAP
-    # _LOGGER.info("Computing UMAP")
-    # sc.pp.neighbors(adata, random_state=seed)
-    # sc.tl.umap(adata, random_state=seed)
-    # adata.obsm["X_default_umap"] = adata.obsm["X_umap"]
-    # latent_spaces.append("X_default_umap")
-    # _LOGGER.info("UMAP computed")
 
     # Compute scVIe
     # _LOGGER.info("Computing scVI")
@@ -229,93 +138,97 @@ def run_methods(adata, seed=0):
     return latent_spaces
 
 
-def repeated_benchmark(n_repeats=10, seed=0):
-    results = []
-    seed_init = seed
-    for i in range(n_repeats):
-        seed = seed_init + i
-        adata_sim = simulation_correlated_shift(
-            n_samples=500,
-            n_genes=50,
-            seed=seed + i,
-            sigma=0.03,
-            branch_prob=0.7,
-            k_clusters=20,
-            hole_size=1,
-            n_holes=3,
-        )
-        latent_spaces = run_methods(adata_sim, seed=seed + i)
-        # latent_spaces = [x for x in latent_spaces if adata_sim.obsm[x].shape[1] == 2]
+def simulation_correlated_shift(
+    n_samples=500,
+    n_genes=50,
+    seed=0,
+    sigma=0.03,
+    branch_prob=0.7,
+    k_clusters=20,
+    hole_size=0,
+    n_holes=0,
+    hole_density=0.0,
+    shift_type: str = "none",
+    shift: float = 0.0, # shift
+) -> sc.AnnData:
+    np.random.seed(seed=seed)
 
-        local_distortion = compute_plot_metrics(
-            adata_sim, latent_spaces, ref_key="latent", show_plots=False
-        )["Cluster local distortion"]
-        local_distortion = local_distortion.melt(var_name="method", value_name="value")
-        local_distortion["seed"] = i
-        results.append(local_distortion)
+    chunk_size = np.array([1, hole_size] * n_holes + [1])
+    chunk_offset = np.cumsum(chunk_size) - chunk_size[0]
+    chunk_prob = np.array([1, hole_size * hole_density] * n_holes + [1])
+    chunk_prob = chunk_prob / chunk_prob.sum()
+    total_size = sum(chunk_size)
+    # sample which chunk the latent time is in
+    chunk = np.random.choice(np.arange(len(chunk_prob)), size=(n_samples,), p=chunk_prob)
+    # sample the latent time within the chunk
+    latent_t_chunk = np.random.uniform(0, 1, size=(n_samples,))
+    latent_t = latent_t_chunk * chunk_size[chunk] + chunk_offset[chunk]
+    latent_t = latent_t / total_size
+    latent_t = latent_t[:, None]
 
-    results = pd.concat(results)
+    # branching
+    branching_t1 = 0.3
+    branching_t2 = 0.5
+    branch_id = np.random.binomial(1, branch_prob, size=(n_samples, 1)) * 2 - 1
+    branch_id = branch_id * (latent_t > branching_t1)
 
-    compute_plot_metrics(
-        adata_sim, latent_spaces, ref_key="latent", color=["latent_t", "branch_id"], show_plots=True
-    )
-    return results
+    z1 = latent_t * total_size
+    z5 = branch_id * (latent_t - branching_t1)
+    z3 = (branch_id == 1) * np.clip(latent_t - 0.3, 0, 0.5)
+    z4 = (branch_id == 1) * np.clip(latent_t - branching_t2, 0, branching_t1)
+    z2 = (branch_id >= 0) * (np.clip(latent_t - 0.2, 0, 0.5) - np.clip(latent_t - 0.5, 0, 0.5))
 
-def plot_embedding(adata, latent_space, figsize, folder, file_suffix="", title=None):
-    os.makedirs(folder, exist_ok=True)
-    fig, ax = plt.subplots(1, 1, figsize=figsize)
-    adata.obs["branch_id"] = adata.obs["branch_id"].astype(str)
-    adata.obs["branch_id"].replace(
-        {
-            "0": "Origin",
-            "1": "Branch 1",
-            "-1": "Branch 2",
-        },
-        inplace=True,
-    )
-    # if latent_space == "decipher_decipher_v":
-    #     import decipher as dc
-
-    #     dc.tl.decipher_rotate_space(
-    #         adata,
-    #         v1_col="latent_t",
-    #         v2_col="latent_t",
-    #         auto_flip_decipher_z=False,
-    #     )
+    # Create latent_z
+    latent_z = np.concatenate([z1, z3, z5], axis=1)
+    latent_z_sampled = np.random.normal(latent_z, sigma)
+    latent_z_sampled[:, 0] /= total_size
     
-    sc.pl.embedding(
-        adata,
-        basis=latent_space,
-        color="latent_t",
-        wspace=0.5,
-        hspace=0.5,
-        ax=ax,
-        size=30,
-        show=False,
-    )
-    # adjust colorbar ticks to just 0 and 1
-    cbar = fig.get_axes()[1]
-    cbar.set_yticks([0, 1])
-    sns.despine()
-    # remove x and y axis and their ticks/labels
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.set_xlabel("")
-    ax.set_ylabel("")
+    # apply the shift
+    if shift_type == "alpha":
+        shift = shift * (latent_t[:,0])
+    elif shift_type == "delta":
+        shift = shift
+    elif shift_type == "none":
+        shift = 0
+    else:
+        raise ValueError(f"Unknown shift_type: {shift_type}")
+        
+    latent_z_sampled[:, 0] += shift
 
-    titles = dict(
-        latent="Ground truth",
-        #X_umap="UMAP",
-        X_norm_umap="Normalized UMAP",
-        #X_fd="Force-directed",
-        #X_scVI_umap="scVI UMAP",
-        decipher_decipher_v="Decipher $v$",
-        decipher_decipher_z="Decipher $z$"
+    net = RandomNet(
+        latent_z_sampled.shape[1],
+        n_genes,
     )
-    # add margin below title
-    if title is None:
-        title = titles[latent_space]
-    ax.set_title(title, fontsize=12, pad=5)
+    data = net(torch.tensor(latent_z_sampled).float()).detach().numpy().astype(int)
+
+    adata_sim = sc.AnnData(data)
+    adata_sim.obs["latent_t"] = latent_t
+    adata_sim.obs["branch_id"] = branch_id
+    adata_sim.obsm["latent_z"] = latent_z
+    
+    k_means = KMeans(k_clusters)
+    k_means.fit(latent_z)
+    adata_sim.obs["cluster_true"] = k_means.labels_
+
+    for i in range(latent_z.shape[1]):
+        adata_sim.obs[f"latent_z{i}"] = latent_z[:, i]
+    adata_sim.obsm["latent"] = latent_z_sampled
+    latent_names = [f"latent_z{i}" for i in range(latent_z.shape[1])]
+    adata_sim.uns["latent_z_names"] = latent_names
+
+    # for each cluster, order the other clusters by distance of their kmeans center
+    cluster_centers = k_means.cluster_centers_
+    cluster_rank = np.argsort(
+        np.linalg.norm(cluster_centers[:, None] - cluster_centers[None, :], axis=2)
+    )
+    adata_sim.uns["cluster_rank"] = cluster_rank[:, 1:]
+    
+    adata_sim.obs["shift"] = f"{shift}"
+
+    return adata_sim
+
+
+
 
 def combined_embeddings(
     adata_sim,

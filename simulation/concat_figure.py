@@ -29,8 +29,8 @@ def umap_norm(
     sc.pl.embedding(
         adata_temp,
         basis="X_norm_umap",
-        color=["cluster_latent", "latent_t", "branch_id", "shift"],
-        ncols=4,
+        color=["latent_t", "branch_id", "shift"],
+        ncols=3,
         show=False,
     )
     plt.savefig(
@@ -40,67 +40,55 @@ def umap_norm(
     
     
 
-def plot_norm_umap(
+def plot_concat_figure(
     adata,
-    out_folder="umap_figures",
-    output_name = "umap_norm",
-    unique_id = "",
+    out_folder="",
+    output_name = "",
     ):
+    os.makedirs(out_folder, exist_ok=True)
     # normalized Umap
     sc.pl.embedding(
         adata,
-        basis="X_norm_umap",
-        color=["cluster_latent", "latent_t", "branch_id", "shift"],
-        ncols=4,
+        basis="X_umap",
+        color=["latent_t", "branch_id", "shift"],
+        ncols=3,
         show=False,
     )
     plt.savefig(
-        os.path.join(out_folder, f"{output_name}_{unique_id}.png"),
+        os.path.join(out_folder, f"umap_{output_name}.png"),
+        bbox_inches="tight",
+    )
+    plt.close()
+
+    #Decipher visible embedding
+    sc.pl.embedding(
+        adata,
+        basis="decipher_decipher_v",
+        color=["latent_t", "branch_id", "shift"],
+        ncols=3,
+        show=False,
+    )
+    plt.savefig(
+        os.path.join(out_folder, f"decipher_v_{output_name}.png"),
         bbox_inches="tight",
     )
     plt.close()
     
-    # original 
-    # sc.pl.embedding(
-    #     adata,
-    #     basis="X_default_umap",
-    #     color=["cluster_latent", "latent_t", "branch_id", "shift"],
-    #     ncols=4,
-    #     show=False,
-    # )
-    # plt.savefig(
-    #     os.path.join(out_folder, f"{output_name}_{unique_id}.png"),
-    #     bbox_inches="tight",
-    # )
-    # plt.close()
-    
-    # Decipher visible embedding
-    # sc.pl.embedding(
-    #     adata,
-    #     basis="decipher_decipher_v",
-    #     color=["cluster_latent", "latent_t", "branch_id", "shift"],
-    #     ncols=4,
-    #     show=False,
-    # )
-    # plt.savefig(
-    #     os.path.join(out_folder, f"decipher_v_combined_{output_name}.png"),
-    #     bbox_inches="tight",
-    # )
-    # plt.close()
-    
 
-# if __name__ == "__main__":
-#     figsize = [2.5, 2]
-#     umap_norm(
-#         adata = sc.read("newadata/adata_combined_norm_3.h5ad"))
-    # plot_concat_figure(
-    #     adata = sc.read("newadata/adata_combined_norm_2.h5ad"),
-    #     output_name = "new2")
-    # plot_concat_figure(
-    #     adata = sc.read("adata/adata_combined_c2.h5ad"),
-    #     output_name = "c2")
-    # plot_concat_figure(
-    #     adata = sc.read("adata/adata_combined_c3.h5ad"),
-    #     output_name = "c3")
+if __name__ == "__main__":
+    #figsize = [2.5, 2]
+    plot_concat_figure(
+        adata = sc.read("simulation/titration/adata/adata_combined_alpha_[0, 5.0, 10.0, 15.0].h5ad"),
+        out_folder="viz",
+        output_name = "alpha_mag_5")
+    plot_concat_figure(
+        adata = sc.read("simulation/titration/adata/adata_combined_alpha_[0, 1.5, 3.0, 4.5].h5ad"),
+        out_folder="viz",
+        output_name = "alpha_mag_1.5")
+    plot_concat_figure(
+        adata = sc.read("simulation/titration/adata/adata_combined_alpha_[0, 2.0, 4.0, 6.0].h5ad"),
+        out_folder="viz",
+        output_name = "alpha_mag_2")
+
     
 
