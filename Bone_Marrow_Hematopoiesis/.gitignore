@@ -1,5 +1,5 @@
 # Exclude experimental training directories (not needed for final results)
-Full_Training/
+Initial_Training_150Epochs/
 BatchEmbdDim_16_Training/
 AttentionHeads_2_Training/
 AttentionHeads_1_Training/
@@ -11,6 +11,10 @@ Initial_Training/*.h5ad
 Beta_1.0_Training/*.h5ad
 Beta_1.0_AttentionHeads_2_Training/*.h5ad
 Decipher_BC_Concat_Training/*.h5ad
+
+# Exclude all h5ad files (large data files)
+*.h5ad
+Preprocessing/*.h5ad
 
 # Keep the comparison figures and other analysis files
 !Initial_Training/*.png
