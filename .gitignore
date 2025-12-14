@@ -22,7 +22,7 @@ venv/
 
 # OS
 .DS_Store
-*.DS_Store
+**.DS_Store
 
 # Data files (uncomment if you don't want to commit large data files)
 # adata/
