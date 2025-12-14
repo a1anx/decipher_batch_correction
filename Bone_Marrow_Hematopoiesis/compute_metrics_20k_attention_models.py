@@ -1,15 +1,17 @@
 """
-Compute Comprehensive Metrics Table for Three Attention-Based Models (20K Dataset)
+Compute Comprehensive Metrics Table for All Models (20K Dataset)
 
 This script computes and displays:
 1. Silhouette Score (cell type separation in V-space)
 2. Spearman Correlation (V1 vs pseudotime alignment)
 3. Batch Entropy (donor mixing in V-space)
 
-For three attention-based models trained on 20K dataset:
+For all models trained on 20K dataset:
+- Regular Decipher (no batch correction)
 - Beta=0.1, Attention Heads=4 (Initial Training)
 - Beta=1.0, Attention Heads=4
 - Beta=1.0, Attention Heads=2
+- Concatenation-based BC (Beta=1.0)
 """
 
 import scanpy as sc
@@ -26,27 +28,33 @@ import os
 warnings.filterwarnings('ignore')
 
 print("="*80)
-print("COMPREHENSIVE METRICS - THREE ATTENTION-BASED MODELS (20K DATASET)")
+print("COMPREHENSIVE METRICS - ALL MODELS (20K DATASET)")
 print("="*80)
 
 # Define paths
 base_dir = "/home/alan/Documents/decipher_batch_correction/Bone_Marrow_Hematopoiesis"
 
-# Load all three models
+# Load all models
 print("\n1. Loading trained models...")
+adata_regular = sc.read_h5ad(os.path.join(base_dir, "bonemarrowmap_small_regular_decipher.h5ad"))
 adata_beta01_heads4 = sc.read_h5ad(os.path.join(base_dir, "Initial_Training/bonemarrowmap_small_batch_corrected.h5ad"))
 adata_beta10_heads4 = sc.read_h5ad(os.path.join(base_dir, "Beta_1.0_Training/bonemarrowmap_small_150epochs_beta1.h5ad"))
 adata_beta10_heads2 = sc.read_h5ad(os.path.join(base_dir, "Beta_1.0_AttentionHeads_2_Training/bonemarrowmap_small_150epochs_beta1_attnheads2.h5ad"))
+adata_concat = sc.read_h5ad(os.path.join(base_dir, "Decipher_BC_Concat_Training/BoneMarrowMap_small_20k_5kgenes_concat_beta1.h5ad"))
 
+print(f"   Regular Decipher (no BC): {adata_regular.n_obs} cells")
 print(f"   Beta=0.1, Heads=4: {adata_beta01_heads4.n_obs} cells")
 print(f"   Beta=1.0, Heads=4: {adata_beta10_heads4.n_obs} cells")
 print(f"   Beta=1.0, Heads=2: {adata_beta10_heads2.n_obs} cells")
+print(f"   Concatenation BC (Beta=1.0): {adata_concat.n_obs} cells")
 
 # Check available embeddings
 print("\n2. Checking available embeddings...")
-for name, adata in [("Beta=0.1, Heads=4", adata_beta01_heads4),
+for name, adata in [("Regular Decipher", adata_regular),
+                     ("Beta=0.1, Heads=4", adata_beta01_heads4),
                      ("Beta=1.0, Heads=4", adata_beta10_heads4),
-                     ("Beta=1.0, Heads=2", adata_beta10_heads2)]:
+                     ("Beta=1.0, Heads=2", adata_beta10_heads2),
+                     ("Concat BC", adata_concat)]:
     print(f"\n   {name}:")
     print(f"   obsm keys: {list(adata.obsm.keys())}")
     print(f"   obs keys: {list(adata.obs.keys())[:10]}...")
@@ -110,7 +118,10 @@ def compute_diffusion_pseudotime(adata, embedding_key, root_type='HSC'):
 
     return adata_temp.obs['dpt_pseudotime'].values
 
-# Compute pseudotime for each model (using batch-corrected V-space embedding)
+# Compute pseudotime for each model
+print("   Computing for Regular Decipher...")
+adata_regular.obs['pseudotime'] = compute_diffusion_pseudotime(adata_regular, 'X_decipher_regular_v')
+
 print("   Computing for Beta=0.1, Heads=4...")
 adata_beta01_heads4.obs['pseudotime'] = compute_diffusion_pseudotime(adata_beta01_heads4, 'X_decipher_batch_corrected_v')
 
@@ -119,6 +130,9 @@ adata_beta10_heads4.obs['pseudotime'] = compute_diffusion_pseudotime(adata_beta1
 
 print("   Computing for Beta=1.0, Heads=2...")
 adata_beta10_heads2.obs['pseudotime'] = compute_diffusion_pseudotime(adata_beta10_heads2, 'X_decipher_batch_corrected_v')
+
+print("   Computing for Concatenation BC...")
+adata_concat.obs['pseudotime'] = compute_diffusion_pseudotime(adata_concat, 'X_decipher_concat_v')
 
 print("\n4. Computing metrics...")
 
@@ -186,7 +200,14 @@ def compute_batch_entropy(adata, embedding_key, batch_key='Donor', k=30):
     return np.mean(entropies)
 
 
-# Compute all metrics for each model (using batch-corrected V-space embedding)
+# Compute all metrics for each model
+print("   Computing for Regular Decipher...")
+regular_metrics = {
+    'V-space Batch Silhouette': compute_silhouette_celltype(adata_regular, 'X_decipher_regular_v'),
+    'Batch Entropy': compute_batch_entropy(adata_regular, 'X_decipher_regular_v'),
+    'V-Pseudotime Correlation (Spearman)': compute_spearman_pseudotime(adata_regular, 'X_decipher_regular_v')
+}
+
 print("   Computing for Beta=0.1, Heads=4...")
 beta01_heads4_metrics = {
     'V-space Batch Silhouette': compute_silhouette_celltype(adata_beta01_heads4, 'X_decipher_batch_corrected_v'),
@@ -208,11 +229,20 @@ beta10_heads2_metrics = {
     'V-Pseudotime Correlation (Spearman)': compute_spearman_pseudotime(adata_beta10_heads2, 'X_decipher_batch_corrected_v')
 }
 
-# Create DataFrame - note the order matches the screenshot
+print("   Computing for Concatenation BC...")
+concat_metrics = {
+    'V-space Batch Silhouette': compute_silhouette_celltype(adata_concat, 'X_decipher_concat_v'),
+    'Batch Entropy': compute_batch_entropy(adata_concat, 'X_decipher_concat_v'),
+    'V-Pseudotime Correlation (Spearman)': compute_spearman_pseudotime(adata_concat, 'X_decipher_concat_v')
+}
+
+# Create DataFrame
 metrics_df = pd.DataFrame({
+    'Regular Decipher (no batch correction)': regular_metrics,
     'Initial Training (Beta = 0.1, Heads = 4)': beta01_heads4_metrics,
     'Beta = 1.0, Heads = 4': beta10_heads4_metrics,
-    'Beta = 1.0, Heads = 2': beta10_heads2_metrics
+    'Beta = 1.0, Heads = 2': beta10_heads2_metrics,
+    'Concatenation BC (Beta = 1.0)': concat_metrics
 }).T
 
 print("\n" + "="*80)
@@ -277,17 +307,17 @@ print(f"""
 """)
 
 # Save metrics to CSV
-csv_file = os.path.join(base_dir, '20k_attention_models_metrics_comparison.csv')
+csv_file = os.path.join(base_dir, '20k_all_models_metrics_comparison.csv')
 metrics_df.to_csv(csv_file)
 print(f"\n✓ Metrics saved to: {csv_file}")
 
 # Create visualization
 print("\n5. Creating metrics visualization...")
 
-fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+fig, axes = plt.subplots(1, 3, figsize=(20, 5))
 
-model_names = ['Beta=0.1\nHeads=4', 'Beta=1.0\nHeads=4', 'Beta=1.0\nHeads=2']
-colors = ['#3498db', '#e74c3c', '#2ecc71']
+model_names = ['Regular\nDecipher', 'Beta=0.1\nHeads=4', 'Beta=1.0\nHeads=4', 'Beta=1.0\nHeads=2', 'Concat BC\n(Beta=1.0)']
+colors = ['#95a5a6', '#3498db', '#e74c3c', '#2ecc71', '#9b59b6']  # Gray for regular, purple for concat
 
 # Plot 1: Silhouette Score
 ax = axes[0]
@@ -333,11 +363,11 @@ for i, (bar, val) in enumerate(zip(bars, values)):
             f'{val:.3f}\n({val/max_entropy*100:.0f}%)', ha='center', va='bottom',
             fontweight='bold', fontsize=10)
 
-plt.suptitle('V-space Metrics Comparison: 20K Dataset - Three Attention-Based Models',
+plt.suptitle('V-space Metrics Comparison: 20K Dataset - All Models',
              fontsize=16, fontweight='bold', y=1.02)
 plt.tight_layout()
 
-plot_file = os.path.join(base_dir, '20k_attention_models_metrics_comparison.png')
+plot_file = os.path.join(base_dir, '20k_all_models_metrics_comparison.png')
 plt.savefig(plot_file, dpi=300, bbox_inches='tight')
 print(f"✓ Visualization saved to: {plot_file}")
 
