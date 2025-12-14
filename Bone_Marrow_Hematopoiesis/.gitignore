@@ -21,4 +21,32 @@ Preprocessing/*.h5ad
 !Beta_1.0_Training/*.png
 !Beta_1.0_AttentionHeads_2_Training/*.png
 !Decipher_BC_Concat_Training/*.png
+
+# Exclude specific visualization files in Initial_Training
+Initial_Training/Visualizations/bonemarrowmap_small_attention_analysis.png
+Initial_Training/Visualizations/bonemarrowmap_small_batch_correction_comparison.png
+Initial_Training/Visualizations/bonemarrowmap_small_biological_preservation.png
+Initial_Training/Visualizations/bonemarrowmap_small_decipher_comparison.png
+
+# Exclude specific visualization files in Beta_1.0_AttentionHeads_2_Training
+Beta_1.0_AttentionHeads_2_Training/Visualizations/bonemarrowmap_small_150epochs_beta1_attnheads2_comparison.png
+
+# Exclude specific visualization files in Decipher_BC_Concat_Training
+Decipher_BC_Concat_Training/Visualizations/concat_vs_attention_comprehensive_comparison.pdf
+Decipher_BC_Concat_Training/Visualizations/concat_vs_attention_comprehensive_comparison.png
+Decipher_BC_Concat_Training/Visualizations/vspace_comparison_native_vs_concat_pseudotime.pdf
+Decipher_BC_Concat_Training/Visualizations/vspace_comparison_native_vs_concat_pseudotime.png
+
+# Exclude Markdown documentation in Subset_by_cell_type
+Subset_by_cell_type/Markdown/
+Subset_by_cell_type/Small Subset Training/Miscellaneous/
+
+# Exclude specific visualization files in Small Subset Training
+Subset_by_cell_type/Small Subset Training/Visualizations/erythroid_batch_corrected_beta0.1_heads4_results.png
+Subset_by_cell_type/Small Subset Training/Visualizations/erythroid_batch_corrected_beta1.0_heads2_results.png
+Subset_by_cell_type/Small Subset Training/Visualizations/erythroid_concat_beta1.0_results.png
+Subset_by_cell_type/Small Subset Training/Visualizations/erythroid_regular_decipher_results.png
+Subset_by_cell_type/Small Subset Training/Visualizations/erythroid_subset_summary.png
+Subset_by_cell_type/Small Subset Training/Visualizations/pseudotime_v_space_analysis.png
+
 Miscellaneous/

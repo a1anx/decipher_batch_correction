@@ -1,0 +1,7 @@
+# Exclude specific visualization files
+Visualizations/batch_correction_biological.png
+Visualizations/batch_correction_biological_2.png
+Visualizations/batch_correction_comparison.png
+Visualizations/batch_correction_comparison_2.png
+Visualizations/correlation_metric_explanation.png
+Visualizations/explain_correlation_metric.py

@@ -1,0 +1,7 @@
+# Exclude documentation and logs
+Miscellaneous/
+
+# Exclude specific visualization files
+Visualization/comparison_metrics.png
+Visualization/concat_biological_variables.png
+Visualization/concat_method_comparison.png
