@@ -1,0 +1,56 @@
+================================================================================
+COMPARING DECIPHER MODELS - ERYTHROID LINEAGE
+================================================================================
+
+1. Loading trained models...
+   Regular Decipher: 2937 cells
+   BC Beta=1.0: 2937 cells
+   BC Beta=0.1: 2937 cells
+
+2. Computing batch mixing metrics...
+
+   Computing for Regular Decipher...
+
+   Computing for BC Beta=1.0...
+
+   Computing for BC Beta=0.1...
+
+================================================================================
+QUANTITATIVE COMPARISON
+================================================================================
+
+Metrics Summary:
+--------------------------------------------------------------------------------
+                       Spearman (trajectory)  Silhouette (cell type)  Batch Entropy (mixing)
+Regular Decipher                         NaN                0.193206                1.965214
+BC Beta=1.0 (2 heads)                    NaN                0.171881                2.298638
+BC Beta=0.1 (4 heads)                    NaN                0.183086                2.290116
+--------------------------------------------------------------------------------
+
+Metric Interpretation:
+  • Spearman correlation: Measures trajectory preservation (-1 to 1, higher is better)
+  • Silhouette score: Measures cell type separation (-1 to 1, higher is better)
+  • Batch entropy: Measures batch mixing (0 to log(n_batches), higher is better)
+    Max entropy for 45 batches: 3.807
+
+3. Creating comparison visualizations...
+   Saved: erythroid_model_comparison.png
+
+4. Creating training curves comparison...
+   Saved: erythroid_training_comparison.png
+
+================================================================================
+✓ COMPARISON COMPLETE!
+================================================================================
+
+Outputs:
+  1. erythroid_model_comparison.png - Main comparison figure
+  2. erythroid_training_comparison.png - Training curves
+
+Key Findings:
+  • Best trajectory preservation: nan
+    (Spearman = nan)
+  • Best cell type separation: Regular Decipher
+    (Silhouette = 0.193)
+  • Best batch mixing: BC Beta=1.0 (2 heads)
+    (Entropy = 2.299)
