@@ -17,8 +17,9 @@ decipher_batch_correction/Bone_Marrow_Hematopoiesis: Many folders here are artif
 
 # simulation
 Contains all files relevant to simulated data generation
-- concat_adata : concatenated adata with both alpha and delta shifts, used for Native Decipher vs Decipher-BC comparison (Fig. 3). Generated using shift_titration.py
-- titration: concatenated adata from running shift_titration.py saved in "adata" folder and the metrics and visualizagion plots saved in the "results" folder
-- params.py : fixed parameters for simulated data generation (seed, n_samples, etc)
-- shift_titration : used functions from simulations.py to simulate data for each of the shifts and repeats for multiple magnitudes, concatenates them and calculates metrics for each concatenated datasets, as well as generate visualizations (Fig. 2)
-- simulations.py : core functions used for simulated data generation that are used for shift_titration
+- **simulation-requirements.txt** : requirements for running scripts within the [simulation] folder
+- **[concat_adata]** : concatenated adata with both alpha and delta shifts, used for Native Decipher vs Decipher-BC comparison (Fig. 3). Generated using shift_titration.py
+- **[titration]**: concatenated adata from running shift_titration.py saved in "adata" folder and the metrics and visualizagion plots saved in the "results" folder
+- **params.py** : fixed parameters for simulated data generation (seed, n_samples, etc)
+- **shift_titration.py** : used functions from simulations.py to simulate data for each of the shifts and repeats for multiple magnitudes, concatenates them and calculates metrics for each concatenated datasets, as well as generate visualizations (Fig. 2)
+- **simulations.py** : core functions used for simulated data generation that are used for shift_titration
