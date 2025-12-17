@@ -19,7 +19,7 @@ from sklearn.metrics import silhouette_score, adjusted_rand_score
 from scipy.stats import spearmanr
 
 import anndata as ad
-from simulations1209 import run_delta_shift, simulation_correlated_shift, run_methods, combined_embeddings
+from simulations import simulation_correlated_shift, run_methods
 import params
 from params import SIMUL_PARAMS
 
@@ -97,14 +97,28 @@ def compute_batch_mixing_metrics(adata, batch_key='shift', z_key='X_decipher_bat
 
 
 def shift_magnitudes(
-    out_folder,
     adata_folder,
     output_name,
     shift_type,
     shifts,
     mag
 ):
-    os.makedirs(out_folder, exist_ok=True)
+    """
+    Compute comprehensive metrics to assess batch mixing quality.
+    
+    Calls:
+    - simulation_correlated_shift from simulations
+    - run_methods from simulations
+
+    Metrics:
+    - batch_silhouette: Lower = better batch mixing
+    - pseudotime_correlation: Higher = better biological preservation
+    - cluster_ari: Higher = better biological structure preservation
+    - mean_attention_strength: Model's batch correction effort
+
+    Returns:
+        adata_concat: concatenated adata of unshifted base data and shifted adatas
+    """
     os.makedirs(adata_folder, exist_ok=True)
     shift_vec = mag * shifts
     
@@ -143,26 +157,16 @@ def shift_magnitudes(
         adata_concat = ad.concat([adata_concat, adata_sim], axis=0,
                                     join="outer", label=None, merge="same")
 
-        # _LOGGER.info(f"Latent spaces: {latent_spaces}")
-        # adata_sim.write(f"{adata_folder}/adata_shift_shift_{shift}.h5ad")
-        # _LOGGER.info(f"Adata saved: {adata_folder}/adata_shift_shift_{shift}.h5ad")
-
-        # (Optional) keep only 2D spaces if you want pure visual spaces
-        # latent_spaces_2d = [k for k in latent_spaces if adata_sim.obsm[k].shape[1] == 2]
-        
-        # combined_embeddings(adata_sim=adata_sim, out_folder=out_folder, shift=shift)
-
     adata_concat.write(os.path.join(adata_folder, f"adata_combined_{shift_type}_{output_name}.h5ad"))
     _LOGGER.info(f"Combined adata saved: {adata_folder}/adata_combined_{shift_type}_{output_name}.h5ad")
 
-        # print(adata_concat.obsm.keys())
-    ## done with adata_concat for one magnitude
     return adata_concat
 
 
 def plot_titration_curves(results_df, out_folder, shift_type):
     """
     Plot titration curves showing batch correction performance vs magnitude.
+    
     """
     os.makedirs(out_folder, exist_ok=True)
     sns.set_style("whitegrid")
@@ -239,6 +243,19 @@ def run_titration(
     out_folder,
     adata_folder,
 ):
+    """
+    Creates one or more sets of shifted, concatenated datasets with differing magnitudes
+    
+    Calls:
+    - shift_magnitudes
+    - run_methods
+    - compute_batch_mixing_metrics
+    - DecipherBatchCorrectedConfig
+    - train_batch_corrected_decipher
+    - evaluate_batch_correction
+    
+    
+    """
     results = []
     for mag in magnitudes:
         # print(output_name)
@@ -249,8 +266,7 @@ def run_titration(
         output_name = str(temp)
         _LOGGER.info(f"Magnitude = {mag}")
         _LOGGER.info(f"{shift_type} = {temp}")
-        adata_concat = shift_magnitudes(out_folder = out_folder,
-                                        adata_folder = adata_folder,
+        adata_concat = shift_magnitudes(adata_folder = adata_folder,
                                         output_name = output_name,
                                         shift_type = shift_type,
                                         shifts = shifts,
@@ -304,7 +320,7 @@ def run_titration(
         adata_concat.obs['batch_attention_strength'] = bc_results['attention_weights'].mean(axis=(1, 2, 3))
 
         _LOGGER.info(f"Training complete (final loss: {losses['val_losses'][-1]:.2f})")
-
+    
         # Compute metrics on batch-corrected embeddings
         bc_metrics = compute_batch_mixing_metrics(
             adata_concat,
@@ -320,37 +336,54 @@ def run_titration(
     results_df = pd.DataFrame(results)
     results_df.to_csv(f"{out_folder}/{shift_type}_titration_metrics_{version}.csv", index=False)
     print(f"Saved metrics: {out_folder}/{shift_type}_titration_metrics_{version}.csv")
-    return results_df
+    return results_df   
+        
     
 
 
 if __name__ == "__main__":
-    
-    magnitudes = [0.05, 0.02, 0.1, 0.2, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0, 5.0]
-    version = "1"
-    shifts = np.array([1.0, 2.0, 3.0])
-    out_folder = "titration/results"
-    adata_folder = "titration/adata"
+    # (1) Variables for Native Decipher vs Decipher-BC comparison dataset
+    version = "simul"
+    shifts = np.array([0.01, 0.05, 0.1])
+    adata_folder = "simulation/concat_adata"
+    output_name = str(shifts)
+    shift_magnitudes(adata_folder,
+                     output_name ,
+                     shift_type = "alpha",
+                     shifts = shifts,
+                     mag = 1)
+    shift_magnitudes(adata_folder,
+                     output_name ,
+                     shift_type = "delta",
+                     shifts = shifts,
+                     mag = 1)
+    # (2) Titration
+    # magnitudes = [0.05, 0.02, 0.1, 0.2, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0, 5.0]
+    # version = "1"
+    # shifts = np.array([1.0, 2.0, 3.0])
+    # out_folder = "titration/results"
+    # adata_folder = "titration/adata"
     
     # alpha
-    shift_type = "alpha"
-    results_df = run_titration(shift_type,
-                  magnitudes,
-                  shifts,
-                  out_folder,
-                  adata_folder)
+    # shift_type = "alpha"
+    # results_df = run_titration(shift_type,
+    #               magnitudes,
+    #               shifts,
+    #               out_folder,
+    #               adata_folder,
+    #               )
         
-    plot_titration_curves(results_df, out_folder, shift_type="alpha")
+    # # plot_titration_curves(results_df, out_folder, shift_type="alpha")
     
-    # delta
-    shift_type = "delta"
-    results_df = run_titration(shift_type,
-                  magnitudes,
-                  shifts,
-                  out_folder,
-                  adata_folder)
+    # # delta
+    # shift_type = "delta"
+    # results_df = run_titration(shift_type,
+    #               magnitudes,
+    #               shifts,
+    #               out_folder,
+    #               adata_folder,)
         
-    plot_titration_curves(results_df, out_folder, shift_type="delta")
+    # plot_titration_curves(results_df, out_folder, shift_type="delta")
     
         
         
