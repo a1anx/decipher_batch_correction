@@ -1,5 +1,8 @@
 # decipher_batch_correction
-Implementing batch correction for Azizi Lab's Decipher method
+Implementing batch correction for Decipher, a deep generative model developed to compare and visualize diverging cell trajectories. This framework was originally developed as a collaboration between the labs of Elham Azizi (Columbia), Dana Pe’er (Sloan Kettering), and David Blei (Columbia).
+
+# Overall Methodology
+Two separate approaches were implemented: simple concatenation and the attention mechanism. 
 
 # Important folders
 decipher_batch_correction/decipher-batch-correction
